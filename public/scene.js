@@ -618,9 +618,11 @@ try{
     ambientId=requestAnimationFrame(animateAmbient);
     if(document.hidden||!ambientVisible)return;
     if(ambientLast&&time-ambientLast<(lowPower()?58:35))return;
-    const delta=ambientLast?Math.min(.08,(time-ambientLast)/1000):.035;
+    const delta=ambientLast?Math.min(.24,Math.max(0,(time-ambientLast)/1000)):.035;
     ambientLast=time;
-    district?.update(time,delta);
+    // Trânsito com tempo estável em GPU lenta, sem extrapolar física dos semáforos.
+    const steps=Math.max(1,Math.ceil(delta/.08));
+    for(let i=0;i<steps;i++)district?.update(time-delta*1000+(i+1)*delta*1000/steps,delta/steps);
     if(weather==='chuva')moveRain(delta);
     const next=doorOpening+(doorTarget-doorOpening)*Math.min(1,delta*6);
     if(Math.abs(next-doorOpening)>.0001){doorOpening=next;

@@ -387,3 +387,15 @@ test('V7 physical pump and NPC have consistent UI and game invariants',()=>{
  assert.match(game,/function animateAttendant\(/);
  assert.match(game,/state='boarding'/);
 });
+
+
+test('low-FPS rendering advances game logic with bounded substeps',()=>{
+  const game=read('public/game.js');
+  const scene=read('public/scene.js');
+  assert.match(game,/const steps=Math\.max\(1,Math\.ceil\(dt\/\.05\)\),step=dt\/steps/);
+  assert.match(game,/for\(let i=0;i<steps;i\+\+\)/);
+  assert.match(game,/moved=move\(step\)\|\|moved/);
+  assert.match(game,/carMoved=animateCustomer\(step\)\|\|carMoved/);
+  assert.match(scene,/const steps=Math\.max\(1,Math\.ceil\(delta\/\.08\)\)/);
+  assert.match(scene,/district\?\.update\(time-delta\*1000/);
+});

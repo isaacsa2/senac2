@@ -497,13 +497,19 @@ function initialise(){
   }
   function tick(now){
     if(!states.active)return;
-    const dt=lastFrame?Math.min(.05,(now-lastFrame)/1000):.016;
+    const dt=lastFrame?Math.min(.24,Math.max(0,(now-lastFrame)/1000)):.016;
     lastFrame=now;
     if(!document.hidden){
-      const moved=move(dt);
+      // Substeps limitam colisões, mas compensam quedas de FPS (software WebGL/mobile).
+      // Sem isso, carros demoram até 4× mais para chegar com baixo FPS.
+      const steps=Math.max(1,Math.ceil(dt/.05)),step=dt/steps;
+      let moved=false,carMoved=false;
+      for(let i=0;i<steps;i++){
+        moved=move(step)||moved;
+        carMoved=animateCustomer(step)||carMoved;
+      }
       animateAttendant(dt,moved);
       const cameraMoving=updateCamera(dt);
-      const carMoved=animateCustomer(dt);
       const closeToDoor=Math.hypot(player.position.x+2.84,player.position.z+6.65)<2.15 || (player.position.z<-6.75&&player.position.z>-10.40&&player.position.x>-5.1&&player.position.x<-.5);
       window.ecoScene.setShopOpen?.(states.active&&closeToDoor);
       if(moved||cameraMoving||carMoved)ctx.requestRender();
