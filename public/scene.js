@@ -329,7 +329,7 @@ try{
   window.ecoScene={
     focus,
     requestRender:queueDraw,
-    getContext:()=>({THREE,scene,world,renderer,overviewCamera:camera,controls,stage,anchors}),
+    getContext:()=>({THREE,scene,world,renderer,overviewCamera:camera,controls,stage,anchors,requestRender:queueDraw}),
     setActiveCamera:(next)=>{activeCamera=next||null;controls.enabled=!activeCamera;queueDraw();},
     setNight:(night)=>{
       daylight.intensity=night?.85:2.25;
