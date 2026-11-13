@@ -25,14 +25,14 @@ function makeLabel(text, foreground='#fff', background=null, fontSize=66) {
   texture.anisotropy=2;
   return new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide,depthWrite:false});
 }
-let renderer, camera, controls, world, scene, renderQueued=false;
+let renderer, camera, controls, world, scene, renderQueued=false, activeCamera=null, daylight, sunLight;
 let anchors=[];
 function buildScene(){
   scene=new THREE.Scene();
   scene.background=null;
   world=new THREE.Group();scene.add(world);
-  scene.add(new THREE.HemisphereLight('#ffffff','#94ad9a',2.25));
-  const sun=new THREE.DirectionalLight('#fff5dd',3.1);sun.position.set(-8,16,10);scene.add(sun);
+  daylight=new THREE.HemisphereLight('#ffffff','#94ad9a',2.25);scene.add(daylight);
+  sunLight=new THREE.DirectionalLight('#fff5dd',3.1);sunLight.position.set(-8,16,10);scene.add(sunLight);
   function box(w,h,d,x,y,z,material,parent=world){
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),typeof material==='string'?color(material):material);
     mesh.position.set(x,y,z);parent.add(mesh);return mesh;
@@ -50,8 +50,8 @@ function buildScene(){
     shadow.rotation.x=-Math.PI/2;shadow.scale.set(rx,rz,1);shadow.position.set(x,.33,z);world.add(shadow);
   }
   // Terreno, calçada e faixa de rodagem
-  box(22,.24,14,0,-.11,0,palette.grass);
-  box(19,.24,10.7,0,.08,-.75,palette.concrete);
+  box(25,.24,23,0,-.11,-2.2,palette.grass);
+  box(23,.24,19.5,0,.08,-2.0,palette.concrete);
   box(21,.11,2.9,0,.04,5.2,palette.road);
   box(19,.1,.21,0,.19,3.65,color('#d5d6c6'));
   for(let x=-9;x<=9;x+=3.2)box(1.55,.02,.075,x,.105,5.2,color('#f1dfb5'));
@@ -105,12 +105,14 @@ function buildScene(){
   dispenser(-6.15,-.40,color('#d8b359'),'ETANOL');
   dispenser(-3.05,-.40,color('#518bb7'),'S10');
   dispenser(.05,-.40,color('#6d879a'),'S500');
-  // Loja de conveniência
+  // Conveniência atrás do posto, com vitrine e produtos em exibição.
+  // O grupo permite mover o edifício inteiro sem afetar as coordenadas internas.
+  const shopFirst=world.children.length;
   ellipseShadow(5.27,-2.47,2.8,2.25,.095);
   box(4.6,2.85,3.65,5.27,1.66,-2.50,palette.white);
   box(4.92,.3,4.0,5.27,3.23,-2.50,palette.trim);
   box(4.98,.11,4.06,5.27,3.43,-2.5,palette.lime);
-  box(4.48,.64,.13,5.27,2.65,-.61,palette.green);
+  box(4.65,.64,.13,5.27,2.65,-.61,palette.green);
   planeLabel('CONVENIÊNCIA',3.45,.42,5.27,2.67,-.53,'#ffffff',null,74);
   box(2.25,1.64,.065,4.15,1.31,-.635,palette.darkGlass);
   box(2.04,1.42,.072,4.15,1.33,-.58,palette.glass);
@@ -120,21 +122,66 @@ function buildScene(){
   box(.09,.1,.1,6.44,1.28,-.48,palette.white);
   box(4.56,.14,.65,5.27,.35,-.22,palette.gray);
   box(3.15,.16,.14,5.27,2.23,-.51,color('#f8cf70'));
-  for(const x of [3.4,4.9,5.85]){
-    box(.30,.21,.07,x,1.13,-.49,color('#fdf9e0'));
+  for(const x of [3.4,4.9,5.85])box(.30,.21,.07,x,1.13,-.49,color('#fdf9e0'));
+  // Expositor de conveniência com latas, garrafas e embalagens modeladas.
+  box(3.55,.12,.58,5.15,.6,.38,palette.white);
+  box(3.55,.11,.58,5.15,1.2,.38,palette.white);
+  box(3.55,.11,.58,5.15,1.82,.38,palette.white);
+  for(const x of [3.58,4.13,4.68,5.23,5.78,6.33]){
+    const c=x<5.15?color('#dc3d34'):color('#436aab');
+    for(const y of [.8,1.4,2.02]){
+      cylinder(.115,.115,.35,x,y,.45,c,10);
+      cylinder(.122,.122,.028,x,y+.19,.45,palette.white,10);
+      planeLabel(x<5.15?'Coca-Cola':'Red Bull',.34,.15,x,y,.58,'#ffffff',null,47);
+    }
   }
-  // Área de serviços: oficina de troca de óleo / calibragem
-  ellipseShadow(5.27,2.45,2.8,1.7,.10);
-  box(4.6,2.75,3.22,5.27,1.58,2.3,color('#dce9e5'));
-  box(4.88,.28,3.56,5.27,3.13,2.30,palette.dark);
-  box(4.83,.12,3.60,5.27,3.34,2.30,palette.gold);
-  box(4.24,2.12,.085,5.27,1.38,3.935,palette.darkGlass);
-  for(let i=0;i<6;i++)box(4.1,.044,.035,5.27,.51+i*.30,3.995,color('#78969b'));
-  box(4.25,.52,.12,5.27,2.68,4.02,color('#286f61'));
-  planeLabel('CUIDADOS AUTO',3.5,.41,5.27,2.69,4.11,'#ffffff',null,74);
-  box(.6,1.5,.55,7.85,1.05,3.04,palette.green);
-  box(.45,.38,.056,7.85,1.54,3.34,palette.darkGlass);
-  box(.35,.24,.056,7.85,.95,3.34,palette.gold);
+  // Ilha de bebidas na entrada: três embalagens maiores em destaque.
+  for(const [x,c,name] of [[3.85,'#cf352d','COCA'],[5.15,'#496dba','RED BULL'],[6.5,'#72b3e5','ÁGUA']]){
+    const material=color(c);
+    cylinder(.25,.25,.8,x,.65,1.05,material,14);
+    cylinder(.255,.255,.045,x,1.07,1.05,palette.white,14);
+    planeLabel(name,.48,.18,x,.72,1.31,'#ffffff',null,65);
+  }
+  const shopEnd=world.children.length;
+  const shopGroup=new THREE.Group();
+  for(const mesh of world.children.slice(shopFirst,shopEnd))shopGroup.attach(mesh);
+  shopGroup.position.set(-8.1,0,-6.05);
+  world.add(shopGroup);
+  // Box de TROCA DE ÓLEO ao lado direito das bombas: cobertura aberta,
+  // rampa, ferramentas, barris e embalagens (sem modelagens externas pesadas).
+  ellipseShadow(6.35,-.35,3.0,2.9,.12);
+  box(5.0,.23,4.4,6.45,.32,-.45,color('#dce3dc'));
+  box(5.10,.32,4.63,6.40,3.25,-.45,palette.dark);
+  box(5.16,.10,4.68,6.40,3.48,-.45,palette.gold);
+  for(const x of [4.15,8.65])for(const z of [-2.5,1.65]){
+    box(.22,2.86,.22,x,1.76,z,palette.white);
+    box(.35,.20,.35,x,.35,z,palette.gray);
+  }
+  box(5.05,.54,.14,6.40,2.72,1.89,palette.green);
+  planeLabel('TROCA DE ÓLEO',4.35,.46,6.40,2.72,1.98,'#ffffff',null,72);
+  // Área aberta visível de frente, com elevador pantográfico estilizado.
+  box(3.05,.22,1.65,6.33,.55,-.4,color('#4f6464'));
+  box(2.2,.14,1.34,6.33,1.00,-.4,palette.gray);
+  for(const x of [5.43,7.23]){
+    box(.11,.8,.11,x,.76,-.4,palette.dark);
+    box(.24,.12,1.32,x,1.08,-.4,palette.gold);
+  }
+  for(const x of [4.45,8.05]){
+    for(const z of [-1.7,-1.15]){
+      cylinder(.32,.35,.54,x,.61,z,color('#2b6c92'),12);
+      box(.45,.18,.02,x,.61,z+.33,palette.white);
+    }
+  }
+  // Armário e itens de óleo Shell ao lado do box
+  box(1.12,1.45,.68,8.22,1.10,-2.1,palette.white);
+  box(1.10,.10,.75,8.22,1.85,-2.1,palette.green);
+  for(const x of [7.88,8.23,8.58])for(const y of [1.12,1.53]){
+    box(.26,.43,.23,x,y,-1.64,color('#9da2a1'));
+    box(.20,.22,.021,x,y+.03,-1.51,color('#e8eced'));
+    planeLabel('HELIX',.20,.13,x,y+.03,-1.49,'#bc3f30',null,46);
+  }
+  box(.62,.92,.56,4.6,.80,-1.85,color('#f4c54f'));
+  planeLabel('ARLA 32',.61,.25,4.6,.86,-1.55,'#1a536d',null,52);
   // Placa totem com informações e placas pequenas
   box(.27,3.3,.28,-9.15,1.78,-3.7,palette.dark);
   box(1.52,2.20,.35,-9.15,3.50,-3.7,palette.green);
@@ -167,39 +214,54 @@ function buildScene(){
       mesh.position.set(x+dx*h,dy*h,z+dz*h);world.add(mesh);
     }
   }
-  tree(-9.4,2.6,.8);tree(-9.0,-5.3,.8);tree(9.20,-5,.85);tree(9.25,3.3,.7);
+  tree(-10.4,2.6,.8);tree(-9.0,-10.5,.8);tree(10.25,-5,.85);tree(10.45,3.3,.7);
   // Bordas da praça / canteiros
   for(const x of [-8.3,8.2]){
     box(.7,.24,1.6,x,.26,1.85,color('#eff2da'));
     for(let i=0;i<3;i++)cylinder(.21,.24,.45,x,.53,1.3+i*.46,color('#74af80'),6);
   }
   anchors=[
-    {label:'Bombas de combustível',category:'combustiveis',position:new THREE.Vector3(-3.2,4.65,.1)},
-    {label:'Loja de conveniência',category:'conveniencia',position:new THREE.Vector3(5.3,3.95,-2.0)},
-    {label:'Cuidados e serviços',category:'cuidados',position:new THREE.Vector3(5.2,3.90,2.65)}
+    {label:'Bombas · 6 combustíveis',category:'combustiveis',position:new THREE.Vector3(-3.2,4.68,.15)},
+    {label:'Conveniência atrás do posto',category:'conveniencia',position:new THREE.Vector3(-2.82,4.15,-8.1)},
+    {label:'Troca de óleo lateral',category:'cuidados',position:new THREE.Vector3(6.5,4.12,.4)},
+    {label:'Coca-Cola',productId:'coca',image:'https://santaluzia.vtexassets.com/arquivos/ids/997380/556297.jpg?v=638525861586730000',position:new THREE.Vector3(-4.20,2.1,-5.08)},
+    {label:'Red Bull',productId:'redbull',image:'https://carrefourbr.vtexassets.com/arquivos/ids/183189711/image-0.jpg?v=638740381539970000',position:new THREE.Vector3(-2.70,2.1,-5.08)},
+    {label:'Shell Helix',productId:'oleo',image:'https://images.tcdn.com.br/img/img_prod/945233/shell_helix_hx8_sp_gf6_5w_30_305337_1_d60fb75deefdebba672b1596906b76c6.jpg',position:new THREE.Vector3(7.6,2.6,-1.2)}
   ];
   for(const anchor of anchors){
     const btn=document.createElement('button');
-    btn.type='button';btn.className='scene-marker';
-    const dot=document.createElement('span');dot.className='marker-dot';
+    btn.type='button';btn.className='scene-marker'+(anchor.productId?' scene-product':'');
+    if(anchor.image){
+      const photo=document.createElement('img');
+      photo.src=anchor.image;photo.alt='Imagem real de '+anchor.label;
+      photo.loading='lazy';photo.decoding='async';
+      photo.addEventListener('error',()=>photo.replaceWith(document.createTextNode('◈')));
+      btn.append(photo);
+    }else{
+      const dot=document.createElement('span');dot.className='marker-dot';btn.append(dot);
+    }
     const label=document.createElement('span');label.textContent=anchor.label;
-    btn.append(dot,label);
-    btn.addEventListener('click',()=>window.dispatchEvent(new CustomEvent('ecoposto:zone',{detail:{category:anchor.category}})));
+    btn.append(label);
+    btn.addEventListener('click',()=>{
+      if(anchor.productId)window.dispatchEvent(new CustomEvent('ecoposto:show-product',{detail:{id:anchor.productId}}));
+      else window.dispatchEvent(new CustomEvent('ecoposto:zone',{detail:{category:anchor.category}}));
+    });
     markersHost.appendChild(btn);anchor.element=btn;
   }
 }
 function draw(){
   renderQueued=false;
   if(!renderer||!stage.isConnected)return;
-  camera.updateMatrixWorld();
+  const viewCamera=activeCamera||camera;
+  viewCamera.updateMatrixWorld();
   for(const marker of anchors){
-    const projected=marker.position.clone().project(camera);
+    const projected=marker.position.clone().project(viewCamera);
     const x=(projected.x+1)/2*100;
     const y=(-projected.y+1)/2*100;
     marker.element.style.left=x+'%';marker.element.style.top=y+'%';
     marker.element.hidden=projected.z>1||x<-4||x>104||y<2||y>99;
   }
-  renderer.render(scene,camera);
+  renderer.render(scene,viewCamera);
 }
 function queueDraw(){
   if(!renderQueued){renderQueued=true;requestAnimationFrame(draw);}
@@ -212,6 +274,7 @@ const views={
 };
 let transitionId=0;
 function focus(name='geral'){
+  stage.dataset.view=name;
   const view=views[name]||views.geral;
   const startPos=camera.position.clone(),startTarget=controls.target.clone(),startZoom=camera.zoom;
   const endPos=new THREE.Vector3(...view.position),endTarget=new THREE.Vector3(...view.target);
@@ -238,6 +301,9 @@ function resize(){
   camera.left=-halfHeight*aspect;camera.right=halfHeight*aspect;
   camera.top=halfHeight;camera.bottom=-halfHeight;
   camera.updateProjectionMatrix();
+  if(activeCamera&&activeCamera.isPerspectiveCamera){
+    activeCamera.aspect=aspect;activeCamera.updateProjectionMatrix();
+  }
   renderer.setSize(width,height,false);queueDraw();
 }
 try{
@@ -260,7 +326,18 @@ try{
   buildScene();
   resize();controls.update();queueDraw();
   fallback.hidden=true;
-  window.ecoScene={focus};
+  window.ecoScene={
+    focus,
+    requestRender:queueDraw,
+    getContext:()=>({THREE,scene,world,renderer,overviewCamera:camera,controls,stage,anchors}),
+    setActiveCamera:(next)=>{activeCamera=next||null;controls.enabled=!activeCamera;queueDraw();},
+    setNight:(night)=>{
+      daylight.intensity=night?.85:2.25;
+      sunLight.intensity=night?.40:3.1;
+      stage.classList.toggle('night-mode',!!night);
+      queueDraw();
+    }
+  };
   window.dispatchEvent(new Event('ecoposto:scene-ready'));
   const ro=new ResizeObserver(resize);ro.observe(stage);
   renderer.domElement.addEventListener('webglcontextlost',(event)=>{

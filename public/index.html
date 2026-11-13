@@ -11,6 +11,7 @@
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"}}</script>
   <script src="./app.js" defer></script>
   <script type="module" src="./scene.js"></script>
+  <script type="module" src="./game.js"></script>
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true">
@@ -38,19 +39,31 @@
         <h1 id="hero-title">Seu posto.<br>Seu aprendizado.<br><em>Outra dimensão.</em></h1>
         <p>Explore um posto em 3D, descubra o que cada combustível e produto faz e pratique um atendimento no caixa — tudo no mesmo lugar.</p>
         <div class="hero-actions"><a class="button button-primary" href="#explorar">Explorar o posto <svg><use href="#i-arrow"></use></svg></a><a href="#produtos" class="button button-outline">Ver produtos</a></div>
-        <div class="hero-stats"><div><strong>3D</strong><span>interativo</span></div><div><strong>13</strong><span>itens no catálogo</span></div><div><strong>100%</strong><span>simulado</span></div></div>
+        <div class="hero-stats"><div><strong>3D</strong><span>interativo</span></div><div><strong>14</strong><span>itens no catálogo</span></div><div><strong>100%</strong><span>simulado</span></div></div>
       </div>
       <div class="hero-aside" aria-hidden="true"><div class="hero-circle circle-a"></div><div class="hero-circle circle-b"></div><div class="hero-sticker"><span class="sticker-star">✳</span><span>Aprender<br>fazendo!</span></div><div class="hero-number">03<span>áreas para explorar</span></div><div class="hero-line line-a"></div><div class="hero-line line-b"></div></div>
     </section>
     <section id="explorar" class="scene-section shell" aria-labelledby="scene-title">
-      <div class="section-heading scene-heading"><div><span class="section-kicker">01 / EXPLORE</span><h2 id="scene-title">Um posto inteiro em <span>3D.</span></h2><p>Arraste para girar, use o zoom e toque nas marcações para descobrir cada área.</p></div><span class="scene-tag"><span class="live-dot"></span> CENA INTERATIVA</span></div>
+      <div class="section-heading scene-heading"><div><span class="section-kicker">01 / EXPLORE</span><h2 id="scene-title">Um posto inteiro em <span>3D.</span></h2><p>Explore livremente ou entre no <strong>modo frentista</strong>: caminhe pelo pátio, abasteça o veículo e registre a venda no PDV.</p></div><span class="scene-tag"><span class="live-dot"></span> CENA INTERATIVA</span></div>
       <div class="scene-card">
         <div class="scene-topbar"><span><span class="scene-topbar-mark"></span>ECOPOSTO <b>WORLD</b></span><span class="scene-topbar-right">MODELO 3D · DEMONSTRAÇÃO</span></div>
         <div class="scene-stage" id="scene-stage" aria-label="Modelo tridimensional de um posto com bombas de combustível, loja de conveniência e serviços">
           <div id="scene-canvas" class="scene-canvas"></div>
           <div class="scene-fallback" id="scene-fallback"><div class="fallback-roof"><b>eco<span>posto</span></b></div><div class="fallback-pumps"><span>GASOLINA</span><span>ETANOL</span><span>DIESEL</span></div><div class="fallback-ground"></div><p>Visualização 3D requer WebGL e acesso ao módulo gráfico.</p></div>
           <div class="scene-marker-layer" id="scene-markers"></div>
-          <span class="scene-helper"><span class="mouse-doodle">↔</span> ARRASTE PARA GIRAR</span>
+          <div class="game-launch" id="game-launch">
+            <span class="game-launch-tag">SIMULAÇÃO INTERATIVA · MISSÃO 01</span>
+            <button type="button" class="button button-primary" id="start-game">▶ Iniciar modo frentista</button>
+            <small>WASD ou setas · E para interagir · controles na tela do celular</small>
+          </div>
+          <div class="game-hud" id="game-hud" hidden aria-live="polite">
+            <div class="game-hud-top"><span class="game-pill">● MODO FRENTISTA</span><span class="game-progress" id="game-progress">Missão: abasteça o primeiro veículo</span>
+              <button type="button" class="game-exit" id="exit-game">Sair do jogo</button>
+            </div>
+            <div class="game-action" id="game-action"><span id="game-action-label">Ande até uma bomba para abastecer</span><button type="button" id="game-interact" disabled>Interagir · E</button></div>
+            <div class="game-touch-pad" id="game-touch-pad" aria-label="Movimentação"><button data-move="forward" type="button" aria-label="Andar para frente">▲</button><div><button data-move="left" type="button" aria-label="Andar para esquerda">◀</button><button data-move="back" type="button" aria-label="Andar para trás">▼</button><button data-move="right" type="button" aria-label="Andar para direita">▶</button></div></div>
+          </div>
+          <span class="scene-helper"><span class="mouse-doodle">↔</span> ARRASTE PARA GIRAR · SCROLL PARA ZOOM</span>
           <span class="scene-corner">VISTA <b>01 — 03</b></span>
         </div>
         <div class="scene-toolbar"><div class="camera-buttons" role="group" aria-label="Ângulo da câmera"><button class="camera-btn is-active" data-view="geral" type="button">Vista geral</button><button class="camera-btn" data-view="bombas" type="button">Bombas</button><button class="camera-btn" data-view="loja" type="button">Loja</button><button class="camera-btn" data-view="servicos" type="button">Serviços</button></div><button class="toolbar-link" id="reset-camera" type="button">↺ Reiniciar câmera</button></div>
@@ -77,6 +90,18 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
   <aside class="cart-drawer" id="cart-drawer" role="dialog" aria-modal="true" aria-label="Simulador de PDV" aria-hidden="true" tabindex="-1"><div class="drawer-header"><div><span class="section-kicker">CAIXA DE TREINAMENTO</span><h2>Meu PDV <span class="drawer-badge">DEMO</span></h2></div><button id="close-cart" class="icon-button" type="button" aria-label="Fechar caixa"><svg><use href="#i-x"></use></svg></button></div><div class="drawer-hint"><svg><use href="#i-info"></use></svg> Este é um exercício. Não existe cobrança ou pagamento real.</div><div class="cart-items" id="cart-items"></div><div class="cart-bottom"><div class="cart-total-line"><span>Total do pedido</span><strong id="cart-total">R$ 0,00</strong></div><button id="checkout-btn" class="button button-primary button-full" type="button">Ir para pagamento simulado <svg><use href="#i-arrow"></use></svg></button><button id="clear-cart" class="button-text" type="button">Limpar pedido</button></div></aside>
+  <dialog id="fuel-dialog" class="modal fuel-dialog" aria-labelledby="fuel-dialog-title"><div class="modal-inner">
+    <button type="button" class="icon-button modal-close" id="fuel-close" aria-label="Fechar abastecimento"><svg><use href="#i-x"></use></svg></button>
+    <span class="section-kicker">POSTO ESCOLA · TREINAMENTO</span><h2 id="fuel-dialog-title">Abastecimento simulado</h2>
+    <p>Selecione o veículo e a meta de litros. O visor da bomba acompanha o abastecimento em tempo real. Nenhum combustível real é fornecido.</p>
+    <div class="fuel-row"><label>Combustível selecionado<strong id="fuel-product-name">—</strong></label><div class="fuel-unit-price" id="fuel-unit-price">R$ 0,00 / L</div></div>
+    <div class="fuel-form"><label for="fuel-vehicle">Tipo de veículo</label><select id="fuel-vehicle"><option value="flex">Carro flex / gasolina</option><option value="diesel">Diesel moderno (exige S10)</option><option value="diesel-antigo">Diesel antigo compatível com S500</option></select>
+      <label for="fuel-target">Quantidade desejada (L)</label><input id="fuel-target" type="number" min="1" max="80" step="1" value="20" inputmode="numeric"></div>
+    <div class="fuel-meter" aria-live="off"><span>ABASTECENDO...</span><div><strong id="fuel-litres">0,0 L</strong><strong id="fuel-amount">R$ 0,00</strong></div><div class="fuel-meter-track"><span id="fuel-progress-bar"></span></div></div>
+    <p class="fuel-error" id="fuel-error" role="alert"></p>
+    <div class="fuel-actions"><button type="button" class="button button-primary" id="fuel-start">Iniciar abastecimento</button><button type="button" class="button button-outline" id="fuel-pause" disabled>Pausar</button><button type="button" class="button button-dark" id="fuel-finish" disabled>Finalizar e registrar no PDV</button></div>
+    <small class="fuel-disclaimer">A simulação utiliza preços fictícios e não interage com bombas de abastecimento.</small>
+  </div></dialog>
   <dialog id="detail-dialog" class="modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><div id="detail-content"></div></div></dialog>
   <dialog id="payment-dialog" class="modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><span class="section-kicker">FINALIZAR · SIMULAÇÃO</span><h2>Forma de pagamento</h2><p class="muted">Escolha uma opção fictícia. Nenhum dado financeiro será coletado.</p><div id="payment-summary" class="payment-summary"></div><fieldset class="payment-options"><legend>Como o cliente pagaria?</legend><label><input type="radio" name="payment" value="pix" checked><span>PIX (simulado)</span></label><label><input type="radio" name="payment" value="cartao"><span>Cartão (simulado)</span></label><label><input type="radio" name="payment" value="dinheiro"><span>Dinheiro (simulado)</span></label></fieldset><div id="cash-group" class="cash-group" hidden><label for="cash-received">Valor recebido (R$)</label><input type="number" min="0" step="0.01" id="cash-received" placeholder="Ex.: 100.00"><small id="cash-change" aria-live="polite"></small></div><p id="payment-error" class="form-error" role="alert"></p><button id="finish-sale" type="button" class="button button-primary button-full">Concluir venda de treinamento <svg><use href="#i-check"></use></svg></button></div></dialog>
   <dialog id="receipt-dialog" class="modal receipt-modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><div id="receipt-content"></div><button id="print-receipt" class="button button-dark button-full" type="button">Imprimir comprovante</button></div></dialog>

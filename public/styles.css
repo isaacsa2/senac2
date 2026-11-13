@@ -231,3 +231,75 @@ h1,h2,h3,p{margin-top:0}
 .scene-marker[hidden]{display:none!important}
 .qty-controls .qty-input{width:58px;min-width:0;border:1px solid #d9e7da;border-radius:8px;padding:5px 3px;text-align:center;background:#f6faf5;font-size:12px;font-weight:800;color:#28593e}
 .qty-unit{font-size:11px;color:#6e8978}
+
+/* Experiência 3D: visual de produto real, modo frentista e bombeamento simulado. */
+.scene-stage{height:clamp(440px,55vw,620px)}
+.scene-stage.night-mode{background:radial-gradient(ellipse at 35% 40%,#4e6471,#182a34 75%)}
+.scene-stage.is-gaming .scene-marker{display:none!important}
+.scene-marker.scene-product{display:none;gap:8px;padding:6px 10px 6px 6px;background:#fff;box-shadow:0 6px 22px #0c372d44;font-size:10px}
+.scene-stage[data-view="loja"] .scene-marker.scene-product,.scene-stage[data-view="servicos"] .scene-marker.scene-product{display:flex}
+.scene-marker.scene-product img{width:35px;height:39px;object-fit:contain;border-radius:6px;background:white}
+.product-art .real-product-image{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;padding:11px 16px;z-index:1;filter:none}
+.product-art .real-product-image[hidden]{display:none}
+.product-art:has(.real-product-image:not([hidden]))>svg{opacity:0}
+.product-art .product-type{z-index:3}
+.game-launch{position:absolute;top:16px;left:18px;z-index:8;display:flex;flex-direction:column;align-items:flex-start;gap:8px;border-radius:15px;padding:15px;background:#153a30e8;color:#fff;box-shadow:0 12px 30px #0c352454;max-width:min(310px,calc(100% - 35px))}
+.game-launch .button{padding:9px 13px;font-size:12px}
+.game-launch-tag{font-size:9px;letter-spacing:1.6px;font-weight:800;color:#c9ef9e}
+.game-launch small{font-size:10px;line-height:1.35;color:#d4e5d5}
+.game-launch[hidden],.game-hud[hidden]{display:none!important}
+.game-hud{position:absolute;inset:0;z-index:9;pointer-events:none;font-size:12px;color:#fff}
+.game-hud button{pointer-events:auto}
+.game-hud-top{position:absolute;top:12px;left:12px;right:12px;display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.game-pill{border-radius:22px;padding:9px 12px;background:#153e2adf;color:#d1f9a6;font-size:10px;letter-spacing:1px;font-weight:900}
+.game-progress{padding:8px 12px;background:#183a319e;border-radius:22px;font-size:10px}
+.game-exit{margin-left:auto;background:#fffdf1e8;border:0;border-radius:10px;color:#285b43;font-size:11px;font-weight:800;padding:8px 11px}
+.game-action{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px;background:#17392fee;padding:8px 10px 8px 15px;border-radius:15px;width:max-content;max-width:calc(100% - 30px);box-shadow:0 8px 28px #0b2e215e}
+.game-action span{font-weight:800;font-size:11px}
+.game-action button{background:#bde878;color:#153f29;font-size:11px;font-weight:800;border:0;border-radius:9px;padding:10px 12px;white-space:nowrap}
+.game-action button:disabled{opacity:.4}
+.game-touch-pad{position:absolute;left:14px;bottom:78px;display:none;flex-direction:column;align-items:center;gap:6px}
+.game-touch-pad>div{display:flex;gap:6px}
+.game-touch-pad button{border:1px solid #e9f6d059;background:#163f35c9;color:#fff;border-radius:10px;width:46px;height:44px;font-size:17px;user-select:none;touch-action:none}
+.game-touch-pad button.is-pressed{background:#a9e479;color:#153e29}
+.fuel-dialog .modal-inner{padding:26px}
+.fuel-row{border:1px solid #d6e8d7;background:#f0f8ed;border-radius:13px;padding:12px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.fuel-row label{font-size:11px;color:#718475}
+.fuel-row strong{display:block;font:800 14px Manrope;margin-top:3px;color:#1e4a32}
+.fuel-unit-price{white-space:nowrap;font-size:12px;font-weight:800;color:#397957}
+.fuel-form{display:grid;grid-template-columns:1fr;gap:8px;margin:16px 0}
+.fuel-form label{font-size:12px;font-weight:800}
+.fuel-form input,.fuel-form select{border:1px solid #d7e6dc;background:white;border-radius:9px;padding:10px 12px;min-height:43px;width:100%;font:600 13px 'DM Sans'}
+.fuel-meter{background:#153b2e;color:#ecf8e7;padding:18px;border-radius:15px;margin-top:15px}
+.fuel-meter>span{font-size:10px;letter-spacing:2px;font-weight:800;color:#b4e67c}
+.fuel-meter>div:nth-child(2){display:flex;justify-content:space-between;gap:8px;align-items:center;margin-top:6px;font:800 22px Manrope}
+.fuel-meter-track{height:10px;border-radius:15px;background:#416651;margin-top:15px;overflow:hidden}
+.fuel-meter-track>span{display:block;height:100%;background:linear-gradient(90deg,#6dce8e,#dbf288);width:0%;transition:width .08s linear}
+.fuel-error{color:#af3e36!important;min-height:15px;font-size:12px}
+.fuel-actions{display:flex;flex-wrap:wrap;gap:8px}
+.fuel-actions .button{flex:1;font-size:11px;padding:12px 9px}
+.fuel-actions #fuel-finish{flex-basis:100%}
+.fuel-disclaimer{display:block;color:#809084;margin-top:14px;font-size:10px}
+@media (max-width:760px){.scene-stage{height:490px}.game-touch-pad{display:flex}.game-progress{display:none}.game-launch{top:12px;left:12px;padding:12px}.scene-corner{display:none}.fuel-meter>div:nth-child(2){font-size:18px}}
+@media (max-width:430px){.scene-stage{height:460px}.game-action{bottom:12px}.game-action span{font-size:10px}.game-action button{padding:8px}.game-touch-pad{bottom:89px;left:10px}.game-touch-pad button{width:43px;height:42px}.game-launch small{font-size:9px}}
+
+.scene-stage.is-gaming .scene-helper,.scene-stage.is-gaming .scene-corner{display:none}
+.game-minimap{position:absolute;top:64px;right:14px;width:124px;height:124px;border:1px solid #9bcaad;background:#163c2cdb;border-radius:13px;box-shadow:0 7px 21px #0b2b276b;color:#e4f6de;overflow:hidden}
+.game-minimap>span{display:block;font-size:8px;letter-spacing:1px;text-align:center;padding-top:5px;font-weight:900}
+.game-minimap i{position:absolute;font-style:normal}
+.game-minimap .map-pumps{left:24%;top:59%;font-size:18px}
+.game-minimap .map-shop{left:36%;top:24%;font-size:19px}
+.game-minimap .map-oil{left:75%;top:55%;font-size:18px}
+.game-minimap .map-player{z-index:2;width:9px;height:9px;border:2px solid #fff;border-radius:50%;background:#f0bd4f;box-shadow:0 0 0 4px #f0bd4f39;transition:left .06s linear,top .06s linear}
+.game-shop-dialog .modal-inner>small{display:block;font-size:11px;color:#809183;margin-top:14px}
+.game-shop-close{float:right}
+.game-products{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:17px}
+.game-product{min-width:0;padding:10px;border:1px solid #d8e9dc;background:#f8fbf8;border-radius:12px}
+.game-product-art{height:106px;border-radius:9px;background:#eff5ef;display:grid;place-items:center;overflow:hidden}
+.game-product-art img{width:100%;height:100%;object-fit:contain}
+.game-product strong{font:800 11px/1.35 'DM Sans';display:block;min-height:45px;margin-top:9px}
+.game-product>div:last-child{display:flex;flex-direction:column;gap:5px}
+.game-product button{border:0;border-radius:7px;background:#2d6348;color:#fff;font-weight:800;font-size:10px;padding:8px 5px}
+.game-product button:first-child{background:#e0ecdf;color:#28583d}
+@media(max-width:760px){.game-minimap{top:95px;right:10px;width:95px;height:95px}.game-minimap .map-shop,.game-minimap .map-oil,.game-minimap .map-pumps{font-size:13px}.game-products{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:430px){.game-minimap{top:106px;right:8px;width:90px;height:90px}.game-hud-top .game-exit{padding:6px;font-size:9px}.game-hud-top{gap:5px}}

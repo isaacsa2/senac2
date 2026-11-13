@@ -2,12 +2,26 @@
 
 Um posto de combustíveis interativo em **3D real (WebGL)**, com catálogo de produtos existentes no mercado brasileiro e um ponto de venda **inteiramente fictício** para treinamento. Feito com HTML, CSS e JavaScript, sem build e sem backend.
 
+## Modo frentista (jogo 3D)
+
+Acesse a seção **Explorar 3D** e clique em **Iniciar modo frentista**. No desktop, use **W/A/S/D** ou as **setas** para movimentar, **Shift** para andar mais rápido e **E** para interagir quando estiver próximo de uma bomba, da conveniência ou do box de troca de óleo. No celular, use as setas virtuais e o botão **Interagir**.
+
+- **Abastecimento:** selecione uma bomba, o tipo correto de veículo e a quantidade desejada (1–80 L para carro flex ou até 200 L para diesel); iniciar, pausar, retomar e finalizar
+- **Compatibilidade:** flex/gasolina/etanol; diesel S10 para motores compatíveis; diesel S500 só em veículo antigo compatível
+- **Visor de abastecimento:** litros, valor em reais e barra de progresso; o total fictício é registrado no PDV em décimos de litro
+- **Conveniência nos fundos:** vitrine modelada com latas e bebidas, fotografias reais nas etiquetas clicáveis e produtos no catálogo
+- **Troca de óleo na lateral:** box aberto com rampa, lubrificantes, ARLA 32 e serviço de manutenção no PDV
+- **HUD:** missão de abastecimento, minimapa e modos dia/noite; som de interface opcional e desligado por padrão
+- **Gráficos leves:** modelos low-poly, textura de texto pequena e renderização sob demanda no modo de visita
+
+O jogo não controla bombas, motores, veículos nem pagamentos reais. Os preços são exemplos, os gráficos estilizados e as imagens de terceiros dependem da disponibilidade dos servidores que as hospedam.
+
 ## O que já funciona
 
 - Maquete 3D do posto: bombas de combustíveis, loja, área de serviços, carro, árvores e cobertura com painéis solares
 - Giro por mouse/toque, zoom e atalhos de câmera, com renderização sob demanda
 - Catálogo por categoria com busca e explicação de cada item, além de links para fontes
-- PDV com produtos, litros, unidades, totalização em centavos e carrinho salvo localmente
+- PDV com produtos, litros em décimos, unidades, totalização em centavos e carrinho salvo localmente
 - Simulação de pagamento PIX, cartão ou dinheiro, incluindo cálculo de troco
 - Comprovante imprimível sinalizado **SIMULAÇÃO — SEM VALOR FISCAL**
 - Layout responsivo e alternativa visual caso WebGL/CDN não funcione
@@ -72,3 +86,14 @@ Fontes oficiais de referência:
 - [Shell Helix HX8 SP 5W-30](https://raizenlubrificantes.shell.com.br/para-revendas-e-consumidores/linha-de-produto/shell-helix/produto/shell-helix-hx8-sp)
 
 O arquivo LICENSE do repositório estabelece AGPL-3.0. O projeto é uma criação original, não uma cópia do simulador do Canva.
+
+## Imagens de produtos
+
+As fotos são exibidas como **etiquetas de produtos na cena 3D** e nos cards do catálogo. Os modelos de latas e galões no mundo 3D são simplificações autorais, não modelos licenciados dos fabricantes. As fotografias reais são carregadas externamente e têm fallback para ícone se a loja/CDN estiver indisponível.
+
+- Coca-Cola 350 mL: Casa Santa Luzia / VTEX
+- Red Bull 250 mL: Carrefour Brasil / VTEX
+- Shell Helix HX8 SP 5W-30: Auri Auto Peças / Tray
+- ARLA 32 20 L: Lima Acessórios / Tray
+
+As imagens e nomes comerciais pertencem aos respectivos titulares. Uso educativo, sem patrocínio ou afiliação; verificar termos de uso antes de redistribuir as fotos em outros projetos.

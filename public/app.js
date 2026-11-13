@@ -7,6 +7,13 @@
   const SRC_DIESEL = 'https://www.shell.com.br/motoristas/combustiveis/shell-v-power-diesel.html';
   const SRC_OIL = 'https://raizenlubrificantes.shell.com.br/para-revendas-e-consumidores/linha-de-produto/shell-helix/produto/shell-helix-hx8-sp';
   const SRC_ARLA = 'https://www.gov.br/anp/pt-br/assuntos/qualidade-de-produtos/arla-32';
+  // Fotografias de embalagens reais, de varejistas brasileiros; sem dependência para o funcionamento do PDV.
+  const pictures={
+    coca:'https://santaluzia.vtexassets.com/arquivos/ids/997380/556297.jpg?v=638525861586730000',
+    redbull:'https://carrefourbr.vtexassets.com/arquivos/ids/183189711/image-0.jpg?v=638740381539970000',
+    oleo:'https://images.tcdn.com.br/img/img_prod/945233/shell_helix_hx8_sp_gf6_5w_30_305337_1_d60fb75deefdebba672b1596906b76c6.jpg',
+    arla:'https://images.tcdn.com.br/img/img_prod/1264917/arla_32_galao_20_lts_7677_1_1bdc0c0ee60766ed8f024ea07b8739f6.png'
+  };
   const products = [
     {id:'gasolina-comum',name:'Gasolina Comum',brand:'Combustível comum',category:'combustiveis',price:625,unit:'L',summary:'Gasolina sem pacote adicional de aditivos detergentes.',how:'Combustível para motores de ciclo Otto a gasolina ou flex. Fornece energia para a combustão interna do motor.',care:'Confirme no manual do veículo o tipo de combustível permitido. O percentual de etanol anidro na mistura pode mudar por regulamentação; não use informações antigas como regra atual.',source:SRC_FUEL},
     {id:'gasolina-nitro',name:'Gasolina Aditivada Shell V-Power Nitro+',brand:'Shell · denominação histórica',category:'combustiveis',price:655,unit:'L',summary:'Gasolina aditivada com agentes de limpeza e proteção.',how:'Nitro+ é uma denominação usada anteriormente para a gasolina aditivada Shell. A linha atualmente é divulgada como Shell V-Power, com tecnologias de limpeza de depósitos no motor.',care:'Gasolina aditivada não é necessariamente premium. O nome Nitro+ aqui foi mantido para fins de treinamento, conforme a nomenclatura do exercício.',source:SRC_VPOWER},
@@ -19,6 +26,7 @@
     {id:'coca',name:'Coca-Cola Original — lata 350 mL',brand:'Coca-Cola',category:'conveniencia',price:650,unit:'un',summary:'Refrigerante para consumo na conveniência.',how:'Bebida não alcoólica carbonatada vendida pronta para consumo. Exemplo de item de giro na loja.',care:'Consulte rótulo, validade e informações nutricionais.',source:'https://www.coca-cola.com/br/pt'},
     {id:'redbull',name:'Red Bull Energy Drink — 250 mL',brand:'Red Bull',category:'conveniencia',price:1290,unit:'un',summary:'Energético em lata para consumo individual.',how:'Bebida energética com cafeína, comercializada pronta para consumo. É um item de conveniência, não um combustível.',care:'Verifique recomendações de consumo e advertências presentes na embalagem.',source:'https://www.redbull.com/br-pt/energydrink'},
     {id:'agua',name:'Água mineral — garrafa 500 mL',brand:'Produto de conveniência',category:'conveniencia',price:350,unit:'un',summary:'Água potável mineral engarrafada.',how:'Bebida para hidratação. No PDV é vendida por unidade, diferentemente de combustíveis, vendidos por litro.',care:'Observe lacre, validade e condições de armazenamento.',source:null},
+    {id:'troca-oleo',name:'Serviço de troca de óleo',brand:'Serviço demonstrativo',category:'servicos',price:6500,unit:'un',summary:'Substituição técnica de lubrificante e verificação da manutenção.',how:'Serviço de retirada e reposição do óleo do motor, conforme a especificação e o procedimento do fabricante. Óleo e filtro podem ser cobrados separadamente.',care:'Execução apenas por profissional qualificado. Óleo usado e filtro devem ser destinados à coleta autorizada, nunca ao solo ou ralo.',source:null},
     {id:'lavagem',name:'Lavagem externa simples',brand:'Serviço demonstrativo',category:'servicos',price:3500,unit:'un',summary:'Limpeza externa do veículo.',how:'Serviço de remoção de sujidades da carroceria com produtos e técnicas adequados para a superfície.',care:'É um serviço fictício do simulador; valor, execução e disponibilidade variam conforme o posto.',source:null},
     {id:'calibragem',name:'Calibragem de pneus',brand:'Serviço demonstrativo',category:'servicos',price:0,unit:'un',summary:'Verificação e ajuste da pressão dos pneus.',how:'Ajusta a pressão dos pneus aos valores recomendados pelo fabricante do veículo nas condições indicadas.',care:'Use a pressão correta indicada no manual ou na etiqueta do veículo, considerando a condição dos pneus.',source:null}
   ];
@@ -26,16 +34,16 @@
   const icons = {combustiveis:'i-pump',cuidados:'i-drop',conveniencia:'i-bag',servicos:'i-tool'};
   const $ = (selector) => document.querySelector(selector);
   const money = (cents) => new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(cents/100);
-  const qtyText = (p,qty) => String(qty)+(p.unit==='L'?' L':' un.');
+  const qtyText = (p,qty) => qty.toLocaleString('pt-BR',{maximumFractionDigits:p.unit==='L'?1:0})+(p.unit==='L'?' L':' un.');
   const storageKey = 'ecoposto-cart-v1';
   let filter='todos', query='', cart=[], lastFocus=null, toastTimeout;
   try {
     const stored=JSON.parse(localStorage.getItem(storageKey)||'[]');
-    if(Array.isArray(stored))cart=stored.filter(e=>e&&products.some(p=>p.id===e.id)&&Number.isInteger(e.qty)&&e.qty>0&&e.qty<=2000).slice(0,30);
+    if(Array.isArray(stored))cart=stored.filter(e=>e&&products.some(p=>p.id===e.id)&&Number.isFinite(e.qty)&&e.qty>0&&e.qty<=2000&&(Number.isInteger(e.qty*10))).slice(0,30);
   } catch { cart=[]; }
   function persist(){try{localStorage.setItem(storageKey,JSON.stringify(cart));}catch{}}
   function productOf(id){return products.find(p=>p.id===id);}
-  function total(){return cart.reduce((sum,e)=>{const p=productOf(e.id);return sum+(p?p.price*e.qty:0);},0);}
+  function total(){return cart.reduce((sum,e)=>{const p=productOf(e.id);return sum+(p?Math.round(p.price*e.qty):0);},0);}
   function notify(message){
     const toast=$('#toast'); toast.textContent=message;toast.classList.add('visible');
     clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>toast.classList.remove('visible'),2800);
@@ -47,7 +55,7 @@
     renderFilters();
     const found=products.filter(p=>(filter==='todos'||p.category===filter)&&(p.name+' '+p.brand+' '+p.summary).toLocaleLowerCase('pt-BR').includes(query));
     $('#products-counter').textContent=found.length+' '+(found.length===1?'ITEM ENCONTRADO':'ITENS ENCONTRADOS');
-    $('#products-grid').innerHTML=found.length?found.map(p=>'<article class="product-card"><div class="product-art" data-kind="'+p.category+'"><span class="product-type">'+labels[p.category].toUpperCase()+'</span><svg aria-hidden="true"><use href="#'+icons[p.category]+'"></use></svg></div><div class="product-body"><span class="product-brand">'+p.brand+'</span><h3>'+p.name+'</h3><p class="product-summary">'+p.summary+'</p><div class="product-meta"><strong class="product-price">'+money(p.price)+'</strong><span class="product-unit">/ '+(p.unit==='L'?'litro':'unidade')+'</span></div><div class="product-actions"><button type="button" class="product-details" data-detail="'+p.id+'">Entender</button><button type="button" class="product-add" data-add="'+p.id+'">+ PDV</button></div></div></article>').join(''):'<p class="empty-state">Nenhum produto encontrado. Tente outro termo ou categoria.</p>';
+    $('#products-grid').innerHTML=found.length?found.map(p=>'<article class="product-card"><div class="product-art" data-kind="'+p.category+'"><span class="product-type">'+labels[p.category].toUpperCase()+'</span><svg aria-hidden="true"><use href="#'+icons[p.category]+'"></use></svg>'+(pictures[p.id]?'<img class="real-product-image" src="'+pictures[p.id]+'" loading="lazy" decoding="async" alt="Embalagem real de '+p.name+'">':'')+'</div><div class="product-body"><span class="product-brand">'+p.brand+'</span><h3>'+p.name+'</h3><p class="product-summary">'+p.summary+'</p><div class="product-meta"><strong class="product-price">'+money(p.price)+'</strong><span class="product-unit">/ '+(p.unit==='L'?'litro':'unidade')+'</span></div><div class="product-actions"><button type="button" class="product-details" data-detail="'+p.id+'">Entender</button><button type="button" class="product-add" data-add="'+p.id+'">+ PDV</button></div></div></article>').join(''):'<p class="empty-state">Nenhum produto encontrado. Tente outro termo ou categoria.</p>';
   }
   function add(id){
     const p=productOf(id);if(!p)return;
@@ -57,7 +65,7 @@
   }
   function adjust(id,delta){
     const entry=cart.find(e=>e.id===id);if(!entry)return;
-    entry.qty=Math.min(2000,entry.qty+delta);
+    entry.qty=Math.min(2000,Math.round((entry.qty+delta)*10)/10);
     if(entry.qty<=0)cart=cart.filter(e=>e.id!==id);
     persist();renderCart();
   }
@@ -70,7 +78,7 @@
     $('#clear-cart').disabled=!cart.length;
     $('#cart-items').innerHTML=cart.length?cart.map(e=>{
       const p=productOf(e.id);if(!p)return '';
-      return '<div class="cart-line"><div class="cart-line-top"><div><h3>'+p.name+'</h3><p>'+money(p.price)+' / '+(p.unit==='L'?'litro':'unidade')+'</p></div><strong>'+money(p.price*e.qty)+'</strong></div><div class="cart-line-bottom"><div class="qty-controls"><button data-adjust="'+p.id+'" data-delta="-1" aria-label="Diminuir '+p.name+'">−</button><input class="qty-input" data-qty="'+p.id+'" type="number" min="1" max="2000" step="1" value="'+e.qty+'" aria-label="Quantidade de '+p.name+' em '+(p.unit==='L'?'litros':'unidades')+'"><span class="qty-unit">'+(p.unit==='L'?'L':'un.')+'</span><button data-adjust="'+p.id+'" data-delta="1" aria-label="Aumentar '+p.name+'">+</button></div><button class="cart-remove" data-remove="'+p.id+'">Remover</button></div></div>';
+      return '<div class="cart-line"><div class="cart-line-top"><div><h3>'+p.name+'</h3><p>'+money(p.price)+' / '+(p.unit==='L'?'litro':'unidade')+'</p></div><strong>'+money(Math.round(p.price*e.qty))+'</strong></div><div class="cart-line-bottom"><div class="qty-controls"><button data-adjust="'+p.id+'" data-delta="'+(p.unit==='L'?'-0.1':'-1')+'" aria-label="Diminuir '+p.name+'">−</button><input class="qty-input" data-qty="'+p.id+'" type="number" min="'+(p.unit==='L'?'0.1':'1')+'" max="2000" step="'+(p.unit==='L'?'0.1':'1')+'" value="'+e.qty+'" aria-label="Quantidade de '+p.name+' em '+(p.unit==='L'?'litros':'unidades')+'"><span class="qty-unit">'+(p.unit==='L'?'L':'un.')+'</span><button data-adjust="'+p.id+'" data-delta="'+(p.unit==='L'?'0.1':'1')+'" aria-label="Aumentar '+p.name+'">+</button></div><button class="cart-remove" data-remove="'+p.id+'">Remover</button></div></div>';
     }).join(''):'<div class="cart-empty"><svg><use href="#i-bag"></use></svg><h3>Seu caixa está vazio</h3><p>Escolha produtos no catálogo para começar a simulação.</p></div>';
   }
   function openCart(){
@@ -161,12 +169,32 @@
     const entry=cart.find(e=>e.id===id);
     if(!entry)return;
     const n=Number(event.target.value);
-    if(!Number.isInteger(n)||n<1||n>2000){event.target.value=entry.qty;notify('Informe uma quantidade inteira entre 1 e 2000.');return;}
+    const p=productOf(id),min=p?.unit==='L'?0.1:1;
+    const valid=Number.isFinite(n)&&n>=min&&n<=2000&&(p?.unit==='L'?Math.abs(n*10-Math.round(n*10))<1e-7:Number.isInteger(n));
+    if(!valid){event.target.value=entry.qty;notify('Informe uma quantidade válida (litros em décimos ou produtos inteiros).');return;}
     entry.qty=n;persist();renderCart();
   });
   $('#finish-sale').addEventListener('click',finishSale);
   $('#print-receipt').addEventListener('click',()=>window.print());
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('#cart-drawer').classList.contains('open'))closeCart();});
+  // Integração com o modo frentista: registra litros com uma casa decimal, sem acesso a bomba real.
+  window.addEventListener('ecoposto:fill-complete',event=>{
+    const id=event.detail?.id;
+    const litres=Number(event.detail?.litres);
+    const p=productOf(id);
+    if(!p||p.unit!=='L'||!Number.isFinite(litres)||litres<1||litres>200||Math.abs(litres*10-Math.round(litres*10))>1e-7)return;
+    const entry=cart.find(e=>e.id===id);
+    if(entry)entry.qty=Math.min(2000,Math.round((entry.qty+litres)*10)/10);
+    else cart.push({id,qty:litres});
+    persist();renderCart();
+    notify(litres.toLocaleString('pt-BR',{maximumFractionDigits:1})+' L de '+p.name+' registrados no PDV.');
+  });
+  window.addEventListener('ecoposto:show-product',event=>openDetails(event.detail?.id));
+  window.addEventListener('ecoposto:add-item',event=>{if(productOf(event.detail?.id))add(event.detail.id);});
+  document.addEventListener('error',event=>{
+    if(event.target instanceof HTMLImageElement&&event.target.matches('.real-product-image'))event.target.hidden=true;
+  },true);
+  window.ecoCatalog={fuelProducts:products.filter(p=>p.category==='combustiveis').map(p=>({id:p.id,name:p.name,price:p.price})),money};
   window.addEventListener('ecoposto:zone',event=>chooseZone(event.detail.category));
   renderProducts();renderCart();
 })();
