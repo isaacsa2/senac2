@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createDistrict } from './world-extra.js?v=realism-v7';
+import { createDistrict } from './world-extra.js?v=street-v8';
 
 // Posto-escola 3D com materiais físicos, texturas procedurais e detalhes de pista leves.
 // Mantém as posições originais das bombas e os eventos usados pelo PDV.
@@ -99,17 +99,21 @@ function buildScene(){
   }
   // Terreno, calçada e faixa de rodagem
   box(25,.24,23,0,-.11,-2.2,palette.grass);
-  box(23,.24,19.5,0,.08,-2.0,concreteSurface);
-  box(21,.11,2.9,0,.04,5.2,asphaltSurface);
+  // O pátio não pode cobrir a pista: o antigo piso de concreto ia até z=7,75,
+  // ficando acima do asfalto e fazendo a calçada aparecer no meio da rua.
+  box(23,.16,15.5,0,.08,-4.25,concreteSurface);
+  // Via de acesso contínua até conectar as duas ruas laterais do bairro.
+  box(33.4,.12,2.9,0,.065,5.2,asphaltSurface);
   box(19,.1,.21,0,.19,3.65,color('#d5d6c6'));
-  for(let x=-9;x<=9;x+=3.2)box(1.55,.02,.075,x,.105,5.2,color('#f1dfb5'));
+  for(let x=-14.0;x<=14;x+=3.2)box(1.55,.016,.075,x,.142,5.2,color('#f1dfb5'));
+
   for(let x=-8;x<=8;x+=2.3)box(.12,.018,.8,x,.22,2.85,color('#f4d984'));
   // Vagas demarcadas, passeio, ralos, faixa de pedestre e sinalização de acesso.
   const stripes=color('#f2e9cf'), curb=color('#c9c8b9'), drain=color('#4d6765');
   for(const x of [-8.25,-5.25,-2.25,.75]) {
     box(.055,.018,1.25,x,.22,1.55,stripes);
   }
-  for(let i=0;i<6;i++)box(.29,.018,1.85,-7.6+i*.52,.21,4.05,stripes);
+  for(let i=0;i<6;i++)box(.29,.018,1.85,-7.6+i*.52,.142,4.05,stripes);
   box(11.2,.12,.22,-2.8,.21,-5.25,curb);
   for(const x of [-8.3,-3.5,1.0,6.9]){
     box(.46,.024,.26,x,.218,2.4,drain);
@@ -351,26 +355,8 @@ function buildScene(){
   planeLabel('COMUM  6,25',1.24,.24,-9.15,2.82,-3.47,'#ffffff',null,49);
   planeLabel('S10     5,99',1.24,.24,-9.15,2.60,-3.47,'#ffffff',null,49);
   // Valores e letreiros exclusivamente demonstrativos.
-  // Veículo leve, formas simples e rodas
-  function car(x,z,bodyColor){
-    ellipseShadow(x,z,1.65,.94,.12);
-    box(2.65,.60,1.31,x,.75,z,bodyColor);
-    box(1.48,.58,1.16,x-.2,1.28,z,bodyColor);
-    box(.86,.41,1.19,x-.55,1.37,z,palette.darkGlass);
-    box(.46,.22,1.20,x+1.15,.70,z,palette.white);
-    for(const dx of [-.88,.86])for(const dz of [-.67,.67]){
-      const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.34,.34,.16,12),palette.wheels);
-      wheel.rotation.x=Math.PI/2;wheel.position.set(x+dx,.49,z+dz);world.add(wheel);
-      const hub=new THREE.Mesh(new THREE.CylinderGeometry(.17,.17,.17,12),palette.gray);
-      hub.rotation.x=Math.PI/2;hub.position.set(x+dx,.49,z+dz+(dz>0?.025:-.025));world.add(hub);
-    }
-    for(const dz of [-.46,.46])box(.13,.19,.20,x+1.35,.82,z+dz,palette.gold);
-    for(const dz of [-.46,.46])box(.07,.20,.18,x-1.33,.82,z+dz,palette.red);
-  }
-  // Veículos estacionados fora das vagas usadas pelos clientes animados.
-  car(9.60,4.50,color('#457a9c'));
-  car(-9.40,4.60,color('#dad6c9'));
-
+  // Não há carros decorativos na entrada: vagas fixas ficam atrás da loja,
+  // no bairro, fora das rotas de tráfego e do atendimento.
   // Faixas refletivas sobre o piso e pequenas balizas na lateral.
   for(const x of [3.45,9.25])for(const z of [-2.75,1.45]){
     cylinder(.065,.075,.74,x,.66,z,palette.gold,8);
@@ -613,7 +599,7 @@ try{
     weather=next;applyAtmosphere();return weather;
   }
     // Animação ambiente com limite de FPS, pausada quando o painel não está visível.
-  let doorOpening=0,doorTarget=0;
+  let doorOpening=0,doorTarget=0,previousTrafficLabel=0;
   function animateAmbient(time){
     ambientId=requestAnimationFrame(animateAmbient);
     if(document.hidden||!ambientVisible)return;
@@ -624,6 +610,16 @@ try{
     const steps=Math.max(1,Math.ceil(delta/.08));
     for(let i=0;i<steps;i++)district?.update(time-delta*1000+(i+1)*delta*1000/steps,delta/steps);
     if(weather==='chuva')moveRain(delta);
+    if(time-previousTrafficLabel>2500){
+      previousTrafficLabel=time;
+      const target=document.querySelector('#traffic-count');
+      if(target&&district){
+        const stats=district.diagnostics();
+        target.textContent=stats.cars+' veículos · '+stats.pedestrians+' pedestres';
+        target.title='Trânsito dinâmico: '+stats.collisionsPrevented+
+          ' aproximações evitadas, '+stats.gridlocksResolved+' bloqueios recuperados';
+      }
+    }
     const next=doorOpening+(doorTarget-doorOpening)*Math.min(1,delta*6);
     if(Math.abs(next-doorOpening)>.0001){doorOpening=next;
       for(const door of shopDoors)door.mesh.position.x=door.x+door.dx*doorOpening;
@@ -642,6 +638,10 @@ try{
     requestRender:queueDraw,setQuality,setShopOpen,setHose,setWeather,getWeather:()=>weather,
     setTrafficDensity:(value)=>district?.setTrafficDensity(value)||{mode:value,count:0,max:0},
     getTrafficStats:()=>district?.diagnostics()||{cars:0,max:0,spawned:0,signals:null},
+    getTrafficCars:()=>district?.trafficCars?.()||[],
+    setTrafficExternalVehicle:vehicle=>district?.setExternalVehicle?.(vehicle),
+    isRouteFreeFor:(vehicle,pose)=>district?.isRouteFreeFor?.(vehicle,pose)!==false,
+    getSidewalkSegments:()=>district?.sidewalkSegments?.()||[],
     getContext:()=>({THREE,scene,world,renderer,overviewCamera:camera,controls,stage,anchors,cameraObstacles,requestRender:queueDraw}),
     setActiveCamera:(next)=>{activeCamera=next||null;controls.enabled=!activeCamera;queueDraw();},
     setNight

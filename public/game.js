@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import {createVehicle,disposeVehicle} from './world-extra.js?v=realism-v7';
-import {buildRoute,sampleRoute,rotateTowards} from './traffic-paths.js?v=realism-v7';
+import {createVehicle,disposeVehicle} from './world-extra.js?v=street-v8';
+import {buildRoute,sampleRoute,rotateTowards} from './traffic-paths.js?v=street-v8';
 
 // Simulação educativa leve: o mundo 3D fica sob responsabilidade de scene.js.
 // Esta camada implementa personagem, proximidade, missões e abastecimento.
@@ -269,6 +269,7 @@ function initialise(){
     vehicle.rotation.y=0;
     vehicle.userData.setLights(night);
     world.add(vehicle);
+    window.ecoScene?.setTrafficExternalVehicle?.(vehicle);
     const arrival=buildRoute({id:'customer-arrival',segments:[
       line(entryX,5.15,finalX-4.0,5.15),
       curve(finalX-4.0,5.15,finalX-2.75,2.65,finalX-1.55,customerLaneZ),
@@ -335,7 +336,14 @@ function initialise(){
     const accel=targetSpeed<customer.velocity?4.0:2.0;
     const dt=Math.max(0,Math.min(.05,delta));
     customer.velocity+=Math.max(-accel*dt,Math.min(accel*dt,targetSpeed-customer.velocity));
-    const step=Math.min(remaining,customer.velocity*dt);
+    let step=Math.min(remaining,customer.velocity*dt);
+    // O cliente também respeita veículos que cruzam a entrada/saída do posto.
+    const nextPose=sampleRoute(customer.route,Math.min(customer.route.length,customer.distance+step));
+    if(step>0&&window.ecoScene?.isRouteFreeFor?.(customer.group,nextPose)===false){
+      step=0;
+      customer.velocity=Math.max(0,customer.velocity-5*dt);
+      customer.group.userData.setBraking(true);
+    }
     customer.distance=Math.min(customer.route.length,customer.distance+step);
     const p=sampleRoute(customer.route,customer.distance);
     customer.group.position.set(p.x,.18+Math.sin(performance.now()/170)*.007,p.z);
@@ -351,6 +359,7 @@ function initialise(){
         makeNPC(customer);updateCustomerHUD();
       }else{
         if(customer.npc){disposeVehicle(customer.npc.group);customer.npc=null;}
+        window.ecoScene?.setTrafficExternalVehicle?.(null);
         disposeVehicle(customer.group);
         currentCar=null;completedCars++;updateCustomerHUD();
       }

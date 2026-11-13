@@ -80,6 +80,62 @@ export function sampleRoute(route,distance){
     heading:headingForTravel(dx,dz),turning:a.turning||b.turning,
     direction:{x:dx/n,z:dz/n}};
 }
+
+/** Geometria de ocupação da pista (metros), para prever cruzamentos e bloqueios. */
+export const TRAFFIC_JUNCTIONS=Object.freeze([{x:-17,z:11.6},{x:17,z:11.6}]);
+export const TRAFFIC_SHAPES=Object.freeze({
+  car:{length:2.88,width:1.38},hatch:{length:2.56,width:1.38},
+  suv:{length:3.22,width:1.45},pickup:{length:3.5,width:1.46},
+  van:{length:3.55,width:1.48},bus:{length:4.8,width:1.52},
+  motorcycle:{length:2.15,width:.72}
+});
+export function trafficEnvelope({x,z,heading=0,variant='car'}){
+  const shape=TRAFFIC_SHAPES[variant]||TRAFFIC_SHAPES.car;
+  return {x,z,heading,length:shape.length,width:shape.width};
+}
+/** OBB/SAT no plano XZ, incluindo folga de segurança. A frente do carro aponta +X local. */
+export function trafficOverlaps(a,b,clearance=.28){
+  if(!a||!b)return false;
+  const dx=b.x-a.x,dz=b.z-a.z;
+  const r=Math.hypot((a.length||3)*.5,(a.width||1.4)*.5)+
+    Math.hypot((b.length||3)*.5,(b.width||1.4)*.5)+clearance;
+  if(dx*dx+dz*dz>r*r)return false;
+  const axis=h=>({forward:[Math.cos(h),-Math.sin(h)],side:[Math.sin(h),Math.cos(h)]});
+  const aa=axis(a.heading||0),bb=axis(b.heading||0),pad=Math.max(0,clearance)*.5;
+  for(const [ux,uz] of [aa.forward,aa.side,bb.forward,bb.side]){
+    const center=Math.abs(dx*ux+dz*uz);
+    const aaLong=Math.abs(ux*aa.forward[0]+uz*aa.forward[1])*(a.length*.5+pad)
+      +Math.abs(ux*aa.side[0]+uz*aa.side[1])*(a.width*.5+pad);
+    const bbLong=Math.abs(ux*bb.forward[0]+uz*bb.forward[1])*(b.length*.5+pad)
+      +Math.abs(ux*bb.side[0]+uz*bb.side[1])*(b.width*.5+pad);
+    if(center>=aaLong+bbLong)return false;
+  }
+  return true;
+}
+export function trafficJunctionDistance(x,z,junction){
+  return Math.hypot(x-junction.x,z-junction.z);
+}
+/** Ordenação determinística nos cruzamentos: veículo já dentro, depois mais próximo, depois ID. */
+export function junctionWinner(vehicles,junction){
+  const candidates=vehicles.filter(v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z))
+    .map(v=>({...v,fromCenter:trafficJunctionDistance(v.x,v.z,junction)}))
+    .filter(v=>v.fromCenter<9.2);
+  if(!candidates.length)return null;
+  candidates.sort((a,b)=>{
+    const insideA=a.fromCenter<4.3?0:1,insideB=b.fromCenter<4.3?0:1;
+    if(insideA!==insideB)return insideA-insideB;
+    if(Math.abs(a.fromCenter-b.fromCenter)>.6)return a.fromCenter-b.fromCenter;
+    return a.id-b.id;
+  });
+  return candidates[0].id;
+}
+/** Risco de uma faixa ficar sem passagem no cruzamento, sem simular colisão física. */
+export function projectedTrafficBlock(ego,others,lookAhead=2.6){
+  const future={...ego,x:ego.x+Math.cos(ego.heading)*lookAhead,
+    z:ego.z-Math.sin(ego.heading)*lookAhead};
+  return others.some(other=>other.id!==ego.id&&
+    (trafficOverlaps(future,other,.45)||trafficOverlaps(ego,other,.18)));
+}
 export function trafficLightPhase(seconds){
   const t=((seconds%40)+40)%40;
   return t<17?'ew':t>=20&&t<37?'ns':'all-red';

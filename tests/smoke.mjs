@@ -399,3 +399,81 @@ test('low-FPS rendering advances game logic with bounded substeps',()=>{
   assert.match(scene,/const steps=Math\.max\(1,Math\.ceil\(delta\/\.08\)\)/);
   assert.match(scene,/district\?\.update\(time-delta\*1000/);
 });
+
+
+test('V8 elevated sidewalks do not bridge active streets or the fueling access',()=>{
+  const scene=read('public/scene.js'),world=read('public/world-extra.js');
+  assert.doesNotMatch(scene,/car\(9\.60,4\.50/);
+  assert.doesNotMatch(scene,/car\(-9\.40,4\.60/);
+  assert.match(scene,/box\(23,\.16,15\.5,0,\.08,-4\.25,concreteSurface\)/);
+  assert.match(scene,/box\(33\.4,\.12,2\.9,0,\.065,5\.2,asphaltSurface\)/);
+  assert.match(world,/function sidewalkRow\(z,depth,material\)/);
+  assert.match(world,/sidewalkRow\(-14\.0,2\.30,pavement\)/);
+  assert.match(world,/sidewalkRow\(19\.0,2\.30,stone\)/);
+  assert.doesNotMatch(world,/cube\(68,\.20,2\.30,0,\.17,-14\.0,pavement\)/);
+  assert.doesNotMatch(world,/cube\(1\.3,\.2,55,x,\.16,-3\.0,pavement\)/);
+  const road=read('public/traffic-paths.js').replace(/^export\s+/gm,'');
+  const sandbox={};
+  runInNewContext(road+';globalThis.P={ROAD_BOUNDS}',sandbox);
+  const {left,right}=sandbox.P.ROAD_BOUNDS;
+  const sections=[[-26.85,14.15],[0,28.45],[26.85,14.15]];
+  for(const [x,width] of sections){
+    const start=x-width/2,end=x+width/2;
+    for(const lane of [left,right]){
+      assert.ok(end<lane.xMin||start>lane.xMax,
+        'raised sidewalk intersects road: '+x+','+width);
+    }
+  }
+  assert.match(world,/cube\(1\.3,\.20,33\.75,x,\.16,-13\.625,pavement\)/);
+  assert.match(world,/cube\(1\.3,\.20,6\.6,x,\.16,21\.20,pavement\)/);
+  // Antigo trecho: z=6.85..24.5 atravessava a avenida de z=6.75..17.65.
+  const boulevard={min:6.75,max:17.65};
+  const southernSidewalk={min:-30.5,max:3.25};
+  const northernSidewalk={min:17.90,max:24.5};
+  assert.ok(southernSidewalk.max<boulevard.min);
+  assert.ok(northernSidewalk.min>boulevard.max);
+});
+test('V8 collision SAT handles right-angle cars, motorcycles and the junction priority',()=>{
+  const code=read('public/traffic-paths.js').replace(/^export\s+/gm,'');
+  const scope={};
+  runInNewContext(code+';globalThis.api={trafficOverlaps,trafficEnvelope,TRAFFIC_SHAPES,junctionWinner,TRAFFIC_JUNCTIONS}',scope);
+  const {trafficOverlaps,trafficEnvelope,TRAFFIC_SHAPES,junctionWinner,TRAFFIC_JUNCTIONS}=scope.api;
+  assert.equal(TRAFFIC_JUNCTIONS.length,2);
+  assert.ok(TRAFFIC_SHAPES.motorcycle.length<TRAFFIC_SHAPES.car.length);
+  assert.equal(trafficOverlaps(
+    trafficEnvelope({x:0,z:0,heading:0,variant:'car'}),
+    trafficEnvelope({x:4.5,z:0,heading:0,variant:'car'})),false);
+  assert.equal(trafficOverlaps(
+    trafficEnvelope({x:0,z:0,heading:0,variant:'car'}),
+    trafficEnvelope({x:2,z:0,heading:0,variant:'car'})),true);
+  assert.equal(trafficOverlaps(
+    trafficEnvelope({x:0,z:0,heading:0,variant:'car'}),
+    trafficEnvelope({x:0,z:0,heading:Math.PI/2,variant:'bus'})),true);
+  assert.equal(trafficOverlaps(
+    trafficEnvelope({x:0,z:0,heading:0,variant:'motorcycle'}),
+    trafficEnvelope({x:0,z:1.65,heading:0,variant:'motorcycle'})),false);
+  const junction={x:17,z:11.6};
+  assert.equal(junctionWinner([{id:21,x:18,z:11.6},{id:4,x:19,z:11.6}],junction),21);
+  assert.equal(junctionWinner([{id:7,x:20,z:11.6},{id:4,x:20,z:11.6}],junction),4);
+});
+test('V8 road traffic cannot clip the customer or park decorative cars in lanes',()=>{
+  const world=read('public/world-extra.js'),scene=read('public/scene.js'),game=read('public/game.js');
+  assert.match(world,/function isRouteFreeFor\(/);
+  assert.match(world,/function nearVehicle\(/);
+  assert.match(world,/junctionWinner\(greenCandidates,j\)/);
+  assert.match(world,/trafficOverlaps\(probe,peer,\.58\)/);
+  assert.match(world,/const wouldOverlap=distance=>nearVehicle/);
+  assert.match(world,/collisionAvoided\+\+/);
+  assert.match(world,/gridlocksResolved\+\+/);
+  assert.match(world,/trafficCars:\(\)=>traffic\.map/);
+  assert.match(scene,/getTrafficCars:/);
+  assert.match(scene,/setTrafficExternalVehicle:/);
+  assert.match(game,/setTrafficExternalVehicle\?\.\(vehicle\)/);
+  assert.match(game,/isRouteFreeFor\?\.\(customer\.group,nextPose\)/);
+  assert.match(world,/variants=\['car','car','hatch','hatch','suv','pickup','van','bus','motorcycle'\]/);
+  assert.match(world,/parkedVehicles\.push/);
+  assert.match(world,/for\(const \[i,profile\] of walkers\.entries\(\)\)/);
+  assert.match(world,/attendants=\[/);
+  assert.match(scene,/from '\.\/world-extra\.js\?v=street-v8'/);
+  assert.match(game,/from '\.\/world-extra\.js\?v=street-v8'/);
+});

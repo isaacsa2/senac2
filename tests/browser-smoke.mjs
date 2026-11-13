@@ -17,6 +17,30 @@ try{
   await page.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded',timeout:20000});
   await page.waitForFunction(()=>Boolean(window.ecoScene&&window.ecoGame&&window.ECO_OPERATIONS),{timeout:45000});
   console.log('Scene initialized');
+  // As calçadas elevadas nunca podem atravessar a via lateral.
+  const sidewalks=await page.evaluate(()=>window.ecoScene.getSidewalkSegments());
+  assert.equal(sidewalks.length,6,'two split sidewalk strips, three segments each');
+  for(const p of sidewalks){
+    const x0=p.x-p.width/2,x1=p.x+p.width/2;
+    assert.ok(x1< -19.6||x0> -14.4,'sidewalk over west side road');
+    assert.ok(x1< 14.4||x0> 19.6,'sidewalk over east side road');
+  }
+  const collisions=[];
+  for(let iteration=0;iteration<6;iteration++){
+    const snapshot=await page.evaluate(()=>window.ecoScene.getTrafficCars());
+    const hits=await page.evaluate(async cars=>{
+      const {trafficEnvelope,trafficOverlaps}=await import('./traffic-paths.js?v=street-v8');
+      const result=[];
+      for(let i=0;i<cars.length;i++)for(let j=i+1;j<cars.length;j++){
+        if(trafficOverlaps(trafficEnvelope(cars[i]),trafficEnvelope(cars[j]),0))
+          result.push([cars[i].id,cars[j].id]);
+      }
+      return result;
+    },snapshot);
+    collisions.push(...hits);
+    await page.waitForTimeout(220);
+  }
+  assert.deepEqual(collisions,[],'traffic vehicles have overlapping bodies');
   await page.screenshot({path:'ecoposto-desktop.png',fullPage:true});
   assert.equal(await page.locator('#products-grid .product-card').count(),45);
   // CPU-based WebGL em CI precisa da qualidade econômica para manter resposta.

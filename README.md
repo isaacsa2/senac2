@@ -175,3 +175,20 @@ O terminal fictício inclui cartão por inserção ou aproximação, sucesso/err
 
 ### Testes
 O CI executa testes unitários de regras e regressões e um teste de interface com Chromium headless (WebGL, movimentação, estoque, clima e pagamento simulado). Se o navegador falhar, um screenshot é anexado aos artefatos do workflow.
+
+
+## V8 — mapa sem calçada sobre rua e trânsito com anticolisão
+
+- Corrigida a malha do pátio: a base de concreto terminava por cima da faixa de rolamento. O concreto agora se encerra antes do asfalto, e a rua de acesso foi prolongada até conectar as duas vias laterais.
+- Os passeios elevados dos lados foram divididos para **não atravessar as pistas**. Há um intervalo livre de passeio na entrada e saída do posto.
+- Removidos os dois veículos decorativos que ficavam permanentemente no corredor de circulação. Os veículos estacionados restantes usam baias separadas atrás da loja, **fora das rotas animadas**.
+- A IA do trânsito passou a comparar **retângulos orientados (SAT/OBB)** de carrocerias e prever veículos à frente e em curvas. Um veículo desacelera ou para para evitar aproximações físicas, respeita os sinais, e usa prioridade exclusiva nos cruzamentos.
+- Bloqueios persistentes por outros veículos acionam recuperação após 28 segundos em vez de deixar a simulação travada. Não se trata de simulação de física de acidentes; a intenção é evitar interpenetração e congestionamentos sem saída.
+- O carro do cliente é detectado pelo trânsito ambiente, e também cede passagem aos veículos que cruzam seu caminho.
+- Novos modelos de **motocicleta** integram a frota aleatória. Também há trabalhadores animados na loja e na oficina, bicicletas junto ao ponto e mais perfis de pedestres nos passeios.
+- O mostrador de trânsito apresenta número de veículos e pedestres, e nos detalhes informa aproximações evitadas e bloqueios recuperados. A contagem e densidade se ajustam para mobile.
+- Testes adicionais cobrem a geometria dos passeios, colisões de carroceria, cruzamentos, ausência dos modelos fixos na passagem e amostragem da pista no navegador.
+
+Esta atualização prioriza estabilidade, clareza visual e coerência de circulação. Ainda não é um simulador certificado de trânsito ou de operação de posto de combustíveis.
+
+A V8 também interrompe os passeios longitudinais antes da avenida principal (faixa z=6,75–17,65), que na versão anterior tinham superfície elevada sobre a rua. A entrada e saída do posto têm asfalto contínuo sem veículo decorativo bloqueando as passagens.
