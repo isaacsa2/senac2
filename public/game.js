@@ -262,7 +262,7 @@ function initialise(){
     filling={pump,product,litres:0,target:20,running:false,finished:false,last:0};
     $('fuel-product-name').textContent=product.name;
     $('fuel-unit-price').textContent=money(product.price)+' / L';
-    vehicle.value=pump.type==='flex'?'flex':'diesel';
+    vehicle.value=pump.type==='flex'?'flex':pump.type==='diesel-antigo'?'diesel-antigo':'diesel';
     targetInput.value='20';targetInput.max=pump.type==='flex'?'80':'200';
     targetInput.disabled=false;vehicle.disabled=false;
     $('fuel-error').textContent='';
@@ -279,7 +279,8 @@ function initialise(){
   function compatible(pump,choice){
     if(pump.type==='flex')return choice==='flex';
     if(pump.type==='diesel')return choice==='diesel'||choice==='diesel-antigo';
-    return choice==='diesel-antigo';
+    if(pump.type==='diesel-antigo')return choice==='diesel-antigo';
+    return false;
   }
   function startFilling(){
     if(!filling||filling.finished)return;
