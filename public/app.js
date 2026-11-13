@@ -68,7 +68,7 @@
     $('#clear-cart').disabled=!cart.length;
     $('#cart-items').innerHTML=cart.length?cart.map(e=>{
       const p=productOf(e.id);if(!p)return '';
-      return '<div class="cart-line"><div class="cart-line-top"><div><h3>'+p.name+'</h3><p>'+money(p.price)+' / '+(p.unit==='L'?'litro':'unidade')+'</p></div><strong>'+money(p.price*e.qty)+'</strong></div><div class="cart-line-bottom"><div class="qty-controls"><button data-adjust="'+p.id+'" data-delta="-1" aria-label="Diminuir '+p.name+'">−</button><span>'+qtyText(p,e.qty)+'</span><button data-adjust="'+p.id+'" data-delta="1" aria-label="Aumentar '+p.name+'">+</button></div><button class="cart-remove" data-remove="'+p.id+'">Remover</button></div></div>';
+      return '<div class="cart-line"><div class="cart-line-top"><div><h3>'+p.name+'</h3><p>'+money(p.price)+' / '+(p.unit==='L'?'litro':'unidade')+'</p></div><strong>'+money(p.price*e.qty)+'</strong></div><div class="cart-line-bottom"><div class="qty-controls"><button data-adjust="'+p.id+'" data-delta="-1" aria-label="Diminuir '+p.name+'">−</button><input class="qty-input" data-qty="'+p.id+'" type="number" min="1" max="2000" step="1" value="'+e.qty+'" aria-label="Quantidade de '+p.name+' em '+(p.unit==='L'?'litros':'unidades')+'"><span class="qty-unit">'+(p.unit==='L'?'L':'un.')+'</span><button data-adjust="'+p.id+'" data-delta="1" aria-label="Aumentar '+p.name+'">+</button></div><button class="cart-remove" data-remove="'+p.id+'">Remover</button></div></div>';
     }).join(''):'<div class="cart-empty"><svg><use href="#i-bag"></use></svg><h3>Seu caixa está vazio</h3><p>Escolha produtos no catálogo para começar a simulação.</p></div>';
   }
   function openCart(){
@@ -153,6 +153,15 @@
   $('#reset-camera').addEventListener('click',()=>{document.querySelector('[data-view="geral"]').click();});
   document.querySelectorAll('input[name="payment"]').forEach(r=>r.addEventListener('change',()=>{$('#cash-group').hidden=paymentMethod()!=='dinheiro';$('#payment-error').textContent='';}));
   $('#cash-received').addEventListener('input',updateCash);
+  $('#cart-items').addEventListener('change',event=>{
+    const id=event.target.dataset.qty;
+    if(!id)return;
+    const entry=cart.find(e=>e.id===id);
+    if(!entry)return;
+    const n=Number(event.target.value);
+    if(!Number.isInteger(n)||n<1||n>2000){event.target.value=entry.qty;notify('Informe uma quantidade inteira entre 1 e 2000.');return;}
+    entry.qty=n;persist();renderCart();
+  });
   $('#finish-sale').addEventListener('click',finishSale);
   $('#print-receipt').addEventListener('click',()=>window.print());
   document.addEventListener('keydown',event=>{if(event.key==='Escape'&&$('#cart-drawer').classList.contains('open'))closeCart();});
