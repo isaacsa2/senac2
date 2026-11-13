@@ -112,7 +112,7 @@
     const n=(Math.max(0,Math.floor(index)))%types.length;
     const base=types[n];
     const starting=base.capacity-base.liters-5;
-    return {...base,plate:'DEMO-'+String(index+1).padStart(3,'0'),customer:['Ana','Carlos','Mariana','João','Beatriz','Rafael'][n]+' (fictício)',tank:starting,requested:base.liters,filled:0,paid:false,orderType:n%3===0?'valor':n%3===1?'litros':'completar',id:'CAR-'+String(index+1).padStart(3,'0')};
+    return {...base,fuelId:base.id,plate:'DEMO-'+String(index+1).padStart(3,'0'),customer:['Ana','Carlos','Mariana','João','Beatriz','Rafael'][n]+' (fictício)',tank:starting,requested:base.liters,filled:0,paid:false,orderType:n%3===0?'valor':n%3===1?'litros':'completar',id:'CAR-'+String(index+1).padStart(3,'0')};
   }
   window.ECO_SIM=Object.freeze({DENOMS,changeFor,denominationsValue,config,setConfig,machineOutcome,receivables,saveCredit,settleCredit,createCustomer,outcomeText});
 })();

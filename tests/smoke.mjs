@@ -159,3 +159,44 @@ test('new modules compile and existing checkout workflow survives',()=>{
  assert.match(app,/function openPosComputer\(/);
  assert.match(app,/ecoposto:sale-complete/);
 });
+
+
+test('regression: customer ID is distinct from fuel SKU, all six cars can find pump island',()=>{
+  const source=read('public/sim-core.js');
+  const store=new Map();
+  const scope={
+    window:{},Date,Math,
+    localStorage:{
+      getItem:key=>store.get(key)||null,
+      setItem:(key,value)=>store.set(key,value)
+    }
+  };
+  runInNewContext(source,scope);
+  const sim=scope.window.ECO_SIM;
+  const expected=[
+    ['gasolina-comum','FLEX'],
+    ['etanol-comum','FLEX'],
+    ['gasolina-nitro','FLEX'],
+    ['diesel-s10','DIESEL'],
+    ['gasolina-racing','PREMIUM'],
+    ['diesel-s500','DIESEL']
+  ];
+  const pumps=[...game.matchAll(/\{id:'([^']+)',name:'[^']+',x:[^,]+,z:[^,]+,type:'[^']+',island:'([^']+)'/g)]
+    .map(match=>({fuelId:match[1],island:match[2]}));
+  assert.equal(pumps.length,6,'six pumps indexed by fuel SKU');
+  for(let i=0;i<18;i++){
+    const order=sim.createCustomer(i);
+    assert.match(order.id,/^CAR-\d{3}$/);
+    assert.notEqual(order.id,order.fuelId,'customer identity must not overwrite fuel SKU');
+    const [fuel,island]=expected[i%6];
+    assert.equal(order.fuelId,fuel);
+    const selected=pumps.find(p=>p.fuelId===order.fuelId);
+    assert.ok(selected,'missing pump for '+order.fuelId);
+    assert.equal(selected.island,island);
+    assert.ok(order.capacity>=order.requested);
+  }
+  assert.doesNotMatch(game,/\border\.id\b/,'game must never use customer ID to find a pump');
+  assert.match(game,/if\(!fuel\)/,'unknown fuel must not crash scene start');
+  assert.match(game,/animId=requestAnimationFrame\(tick\);\s*if\(!currentCar\)createQueueCar\(\)/,
+    'movement loop must start before optional queue generation');
+});

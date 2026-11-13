@@ -184,7 +184,7 @@ function initialise(){
     beep();
   });
   function customerFuel(){
-    return currentCar?pumpList.find(x=>x.id===currentCar.order.id):null;
+    return currentCar?pumpList.find(x=>x.id===currentCar.order.fuelId):null;
   }
   function nearest(){
     let best=null,dMin=Infinity;
@@ -218,7 +218,7 @@ function initialise(){
     const {order,state}=currentCar;
     $('customer-summary').textContent=order.vehicle+' • '+order.plate;
     const fuel=customerFuel();
-    const price=window.ecoCatalog?.fuelProducts?.find(p=>p.id===order.id)?.price||0;
+    const price=window.ecoCatalog?.fuelProducts?.find(p=>p.id===order.fuelId)?.price||0;
     const request=order.orderType==='valor'?'R$ 50,00 em '+fuel?.name
       :order.orderType==='completar'?'Completar tanque • '+fuel?.name
       :order.requested+' L de '+fuel?.name;
@@ -232,7 +232,16 @@ function initialise(){
   function createQueueCar(){
     if(currentCar||!sim)return;
     const order=sim.createCustomer(customerSerial++);
-    const fuel=pumpList.find(p=>p.id===order.id);
+    const fuel=pumpList.find(p=>p.id===order.fuelId);
+    // Um identificador de atendimento (CAR-001) nunca é um SKU de combustível.
+    // Valide a associação antes de instanciar/renderizar o carro.
+    if(!fuel){
+      console.warn('EcoPosto: pedido com combustível desconhecido, atendimento ignorado.',order.fuelId);
+      customerSerial=Math.max(0,customerSerial-1);
+      carStatus('Não foi possível associar o veículo a um combustível válido.','PEDIDO INVÁLIDO');
+      $('customer-next').disabled=false;
+      return;
+    }
     const group=createVehicle(['#438eb1','#e2d6be','#7c9b84','#e4e8e8','#a8494c','#677485'][customerSerial%6],
       order.kind==='diesel'||order.kind==='diesel-antigo'?'pickup':'car');
     group.position.set(-16,.18,5.2);
@@ -317,7 +326,7 @@ function initialise(){
   window.addEventListener('ecoposto:sale-complete',event=>{
     if(!currentCar||currentCar.state!=='filled')return;
     const ids=event.detail?.productIds;
-    if(!Array.isArray(ids)||!ids.includes(currentCar.order.id))return;
+    if(!Array.isArray(ids)||!ids.includes(currentCar.order.fuelId))return;
     currentCar.state='paid';currentCar.order.paid=true;
     updateCustomerHUD();ctx.requestRender();
   });
@@ -432,8 +441,9 @@ function initialise(){
     window.ecoScene.setActiveCamera(cam);
     lastFrame=0;
     updateHud();updateMini();updateCustomerHUD();
-    if(!currentCar)createQueueCar();
+    // Mantém o loop do personagem ativo mesmo que a fila de veículos falhe.
     animId=requestAnimationFrame(tick);
+    if(!currentCar)createQueueCar();
     ctx.requestRender();
   }
   function stop(){
@@ -529,7 +539,7 @@ function initialise(){
     $('fuel-unit-price').textContent=money(product.price)+' / L';
     vehicle.value=pump.type==='flex'?'flex':pump.type==='diesel-antigo'?'diesel-antigo':'diesel';
     // Pedido realista: valor em reais, litros ou completar tanque.
-    const selected=currentCar?.state==='parked'&&currentCar.order.id===pump.id?currentCar.order:null;
+    const selected=currentCar?.state==='parked'&&currentCar.order.fuelId===pump.id?currentCar.order:null;
     const price=product.price;
     const amount=selected?(selected.orderType==='valor'?Math.round(5000/price):
       selected.orderType==='completar'?Math.max(1,selected.capacity-selected.tank):selected.requested):20;
@@ -614,7 +624,7 @@ function initialise(){
     window.dispatchEvent(new CustomEvent('ecoposto:fill-complete',{detail:{id:filling.product.id,litres}}));
     states.runs+=1;
     states.liters=Math.round((states.liters+litres)*10)/10;
-    if(currentCar?.state==='parked'&&currentCar.order.id===filling.product.id){
+    if(currentCar?.state==='parked'&&currentCar.order.fuelId===filling.product.id){
       currentCar.order.filled=litres;
       currentCar.order.tank=Math.min(currentCar.order.capacity,currentCar.order.tank+litres);
       currentCar.state='filled';updateCustomerHUD();
