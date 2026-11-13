@@ -18,14 +18,22 @@ try{
   await page.waitForFunction(()=>Boolean(window.ecoScene&&window.ecoGame&&window.ECO_OPERATIONS),{timeout:45000});
   console.log('Scene initialized');
   assert.equal(await page.locator('#products-grid .product-card').count(),45);
+  // CPU-based WebGL em CI precisa da qualidade econômica para manter resposta.
+  await page.locator('#graphics-quality').selectOption('economico');
+  await page.locator('#traffic-density').selectOption('baixo');
   await page.locator('#start-game').click();
-  await page.waitForFunction(()=>window.ecoGame?.isActive(),{timeout:6000});
-  const before=await page.evaluate(()=>window.ecoGame.getPlayerPosition());
+  await page.waitForFunction(()=>window.ecoGame?.isActive(),{timeout:8000});
+  await page.waitForTimeout(300);
+  const before=await page.evaluate(()=>window.ecoGame.getDebugState());
   await page.keyboard.down('w');
-  await page.waitForTimeout(460);
+  const pressed=await page.evaluate(()=>window.ecoGame.getDebugState());
+  await page.waitForTimeout(1400);
+  const moving=await page.evaluate(()=>window.ecoGame.getDebugState());
   await page.keyboard.up('w');
-  const after=await page.evaluate(()=>window.ecoGame.getPlayerPosition());
-  assert.ok(Math.hypot(after.x-before.x,after.z-before.z)>.10,'attendant did not walk');
+  const after=await page.evaluate(()=>window.ecoGame.getDebugState());
+  console.log('Movement diagnostic:',JSON.stringify({before,pressed,moving,after}));
+  assert.ok(Math.hypot(after.position.x-before.position.x,after.position.z-before.position.z)>.10,
+    'attendant did not walk; debug: '+JSON.stringify({before,pressed,moving,after}));
   await page.waitForFunction(()=>window.ecoGame?.getCustomerState()==='parked',{timeout:26000});
   assert.ok(await page.evaluate(()=>Boolean(window.ecoGame.currentCustomer()?.fuelId)),
     'arriving customer has no valid fuel request');

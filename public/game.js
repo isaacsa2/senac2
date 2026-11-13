@@ -870,6 +870,11 @@ function initialise(){
     currentCustomer:()=>currentCar?.order||null,spawnCustomer:createQueueCar,
     getPlayerPosition:()=>({x:player.position.x,y:player.position.y,z:player.position.z}),
     getCustomerState:()=>currentCar?.state||null,
+    getDebugState:()=>({active:states.active,keys:[...states.keys],
+      position:{x:player.position.x,z:player.position.z},yaw:cameraRig.yaw,
+      tickLastFrame:lastFrame,openDialogs:[...document.querySelectorAll('dialog[open]')].map(x=>x.id),
+      documentHidden:document.hidden,blockedForward:isBlocked(player.position.x-.10,player.position.z-.18),
+      currentCar:currentCar?.state||null}),
     getFuelSession:()=>filling?{id:filling.product.id,litres:filling.deliveredDeci/10,
       connected:filling.connected,running:filling.running,finished:filling.finished}:null};
 }
