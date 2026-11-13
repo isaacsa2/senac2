@@ -9,6 +9,7 @@
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"}}</script>
+  <script src="./sim-core.js" defer></script>
   <script src="./catalog-extra.js" defer></script>
   <script src="./app.js" defer></script>
   <script type="module" src="./scene.js"></script>
@@ -58,8 +59,15 @@
             <small>WASD/setas · E interagir · mouse arrasta câmera · V muda câmera</small>
           </div>
           <div class="game-hud" id="game-hud" hidden aria-live="polite">
-            <div class="game-hud-top"><span class="game-pill">● MODO FRENTISTA</span><span class="game-progress" id="game-progress">Missão: abasteça o primeiro veículo</span>
+            <div class="game-hud-top"><span class="game-pill">● MODO FRENTISTA</span><span class="game-progress" id="game-progress">Missão: atender o primeiro veículo</span>
               <button type="button" class="game-exit" id="exit-game">Sair do jogo</button>
+            </div>
+            <div class="customer-hud" id="customer-hud">
+              <div><span class="customer-indicator" id="customer-indicator">CLIENTE AGUARDANDO</span>
+                <strong id="customer-summary">Sem veículo na pista</strong>
+                <small id="customer-request">Chame um veículo para começar o atendimento.</small>
+              </div>
+              <div class="customer-buttons"><button type="button" id="customer-next">Chamar veículo</button><button type="button" id="customer-release" disabled>Liberar saída</button></div>
             </div>
             <div class="game-action" id="game-action"><span id="game-action-label">Ande até uma bomba para abastecer</span><button type="button" id="game-interact" disabled>Interagir · E</button></div>
             <div class="game-touch-pad" id="game-touch-pad" aria-label="Movimentação"><button data-move="forward" type="button" aria-label="Andar para frente">▲</button><div><button data-move="left" type="button" aria-label="Andar para esquerda">◀</button><button data-move="back" type="button" aria-label="Andar para trás">▼</button><button data-move="right" type="button" aria-label="Andar para direita">▶</button></div></div>
@@ -98,6 +106,15 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
   <aside class="cart-drawer" id="cart-drawer" role="dialog" aria-modal="true" aria-label="Simulador de PDV" aria-hidden="true" tabindex="-1"><div class="drawer-header"><div><span class="section-kicker">CAIXA DE TREINAMENTO</span><h2>Meu PDV <span class="drawer-badge">DEMO</span></h2></div><button id="close-cart" class="icon-button" type="button" aria-label="Fechar caixa"><svg><use href="#i-x"></use></svg></button></div><div class="drawer-hint"><svg><use href="#i-info"></use></svg> Este é um exercício. Não existe cobrança ou pagamento real.</div><div class="cart-items" id="cart-items"></div><div class="cart-bottom"><div class="cart-total-line"><span>Total do pedido</span><strong id="cart-total">R$ 0,00</strong></div><button id="checkout-btn" class="button button-primary button-full" type="button">Ir para pagamento simulado <svg><use href="#i-arrow"></use></svg></button><button id="clear-cart" class="button-text" type="button">Limpar pedido</button></div></aside>
+  <dialog id="nozzle-dialog" class="modal nozzle-dialog" aria-labelledby="nozzle-title">
+    <div class="modal-inner">
+      <button type="button" class="icon-button modal-close" id="nozzle-close" aria-label="Fechar escolha do bico">✕</button>
+      <span class="section-kicker">BOMBA MULTIPRODUTO • TREINAMENTO</span><h2 id="nozzle-title">Escolha o bico de abastecimento</h2>
+      <p>Conecte o bico correto ao pedido do cliente. Uma bomba pode oferecer vários combustíveis.</p>
+      <div class="nozzle-options" id="nozzle-options"></div>
+      <p class="muted" id="nozzle-warning" role="status">Siga a especificação do veículo.</p>
+    </div>
+  </dialog>
   <dialog id="fuel-dialog" class="modal fuel-dialog" aria-labelledby="fuel-dialog-title"><div class="modal-inner">
     <button type="button" class="icon-button modal-close" id="fuel-close" aria-label="Fechar abastecimento"><svg><use href="#i-x"></use></svg></button>
     <span class="section-kicker">POSTO ESCOLA · TREINAMENTO</span><h2 id="fuel-dialog-title">Abastecimento simulado</h2>
@@ -111,6 +128,26 @@
     <small class="fuel-disclaimer">A simulação utiliza preços fictícios e não interage com bombas de abastecimento.</small>
   </div></dialog>
   <dialog id="detail-dialog" class="modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><div id="detail-content"></div></div></dialog>
+  <dialog id="pos-computer" class="modal pos-computer" aria-label="Computador do caixa - treinamento">
+    <div class="pos-computer-shell">
+      <header class="pos-computer-head"><div><span>ECOPOSTO | PDV GERENCIAL</span><strong>CAIXA 01 · MODO ESCOLA</strong></div><button id="pos-close" type="button" aria-label="Fechar computador">✕</button></header>
+      <nav class="pos-computer-nav"><span>VENDAS</span><span>ABASTECIMENTOS</span><span>CONVENIÊNCIA</span><span>FINANCEIRO</span><span>CLIENTES</span></nav>
+      <div class="pos-computer-content">
+        <section><div class="pos-computer-subhead"><h3>Itens em atendimento</h3><small id="pos-computer-customer">Cliente de treinamento</small></div>
+          <div class="pos-computer-table"><table><thead><tr><th>ITEM / SERVIÇO</th><th>QTD.</th><th>VALOR</th></tr></thead><tbody id="pos-computer-rows"></tbody></table></div>
+        </section>
+        <aside class="pos-computer-side">
+          <span>VALOR TOTAL</span><strong id="pos-computer-total">R$ 0,00</strong>
+          <div>TERMINAL <b>ECOPAY DEMO</b></div>
+          <button id="pos-open-payment" type="button">F4 · RECEBER</button>
+          <button id="pos-credit" type="button">F6 · NOTA A PRAZO</button>
+          <button id="pos-open-cart" type="button">EDITAR CARRINHO</button>
+          <p>Inspirado em interfaces brasileiras de PDV automotivo, sem reproduzir software comercial.</p>
+        </aside>
+      </div>
+      <footer>F4 RECEBER · F6 PRAZO · ESC FECHAR <span>ERP SIMULADO · OFFLINE</span></footer>
+    </div>
+  </dialog>
   <dialog id="payment-dialog" class="modal payment-dialog" aria-labelledby="payment-title">
     <div class="modal-inner">
       <button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar pagamento"><svg><use href="#i-x"></use></svg></button>
@@ -123,6 +160,7 @@
         <label class="method-tile"><input type="radio" name="payment" value="pix" checked><span class="method-emoji">▦</span><span>Pix<small>Na maquininha</small></span></label>
         <label class="method-tile"><input type="radio" name="payment" value="cartao"><span class="method-emoji">▣</span><span>Cartão<small>Débito ou crédito</small></span></label>
         <label class="method-tile"><input type="radio" name="payment" value="dinheiro"><span class="method-emoji">▤</span><span>Dinheiro<small>Na mão, com troco</small></span></label>
+        <label class="method-tile"><input type="radio" name="payment" value="prazo"><span class="method-emoji">▣</span><span>Nota a prazo<small>Conta a receber fictícia</small></span></label>
       </fieldset>
       <section class="payment-visual" id="payment-device" aria-label="Maquininha de pagamento demonstrativa">
         <div class="reader-scene">
@@ -142,12 +180,18 @@
           </div>
         </div>
         <div class="terminal-controls">
+          <div id="card-operation-group" hidden><label for="card-operation">Como o cartão será lido?</label>
+            <select id="card-operation"><option value="tap">Aproximação (NFC)</option><option value="insert">Inserir no leitor (chip)</option></select></div>
           <div id="card-type-group" hidden>
             <label for="card-type">Modalidade do cartão</label>
             <select id="card-type"><option value="debito">Débito</option><option value="credito">Crédito</option></select>
           </div>
           <p class="reader-instructions" id="terminal-instructions">O QR abaixo é apenas um desenho ilustrativo: não é possível escanear ou pagar.</p>
           <div class="terminal-status" id="terminal-status" role="status">AGUARDANDO</div>
+          <div class="terminal-settings"><label for="machine-scenario">Cenário da maquininha (modo instrutor)</label>
+            <select id="machine-scenario"><option value="random">Aleatório (treinamento)</option><option value="approved">Forçar aprovação</option><option value="read_error">Erro de leitura</option><option value="declined">Transação negada</option><option value="offline">Sem comunicação</option><option value="pin_error">Senha fictícia incorreta</option></select>
+            <small id="machine-odds">As chances são didáticas e não representam instituições reais.</small>
+          </div>
           <button class="button button-dark button-full" type="button" id="terminal-confirm">Simular pagamento Pix</button>
           <small>Operação offline, sem conta, chave Pix, senha ou dados bancários.</small>
         </div>
@@ -156,12 +200,24 @@
         <div class="cash-art" aria-hidden="true"><div class="cash-note note-back">R$</div><div class="cash-note note-front"><small>REAL</small><strong id="cash-art-value">R$ 20</strong><span>NOTA ILUSTRATIVA</span></div><div class="cash-hand"><div class="cash-fingers"></div><div class="cash-palm"></div></div></div>
         <h3>Cliente entregou dinheiro na mão</h3>
         <p>Selecione as cédulas recebidas ou digite o valor total. Você pode combinar notas.</p>
-        <div class="cash-bills" role="group" aria-label="Adicionar cédulas fictícias">
-          <button type="button" data-cash-bill="2">R$ 2</button><button type="button" data-cash-bill="5">R$ 5</button><button type="button" data-cash-bill="10">R$ 10</button><button type="button" data-cash-bill="20">R$ 20</button><button type="button" data-cash-bill="50">R$ 50</button><button type="button" data-cash-bill="100">R$ 100</button><button type="button" data-cash-bill="200">R$ 200</button>
-        </div>
+        <div class="cash-bills" id="cash-denominations" role="group" aria-label="Adicionar cédulas e moedas fictícias"></div>
         <label for="cash-received">Total recebido (R$)</label>
         <div class="cash-input-row"><input type="number" id="cash-received" min="0" max="100000" step="0.01" inputmode="decimal" placeholder="Ex.: 100.00"><button type="button" id="cash-reset">Zerar</button></div>
         <div class="cash-change-display" id="cash-change" aria-live="polite">Informe o valor recebido</div>
+        <div class="cash-change-breakdown" id="cash-change-breakdown" aria-live="polite"></div>
+        <small>Notas e moedas do Real conforme o Banco Central. A moeda de 1 centavo é rara, mas consta para troco exato.</small>
+      </section>
+      <section id="credit-group" class="credit-section" hidden aria-label="Venda a prazo de treinamento">
+        <div class="credit-head"><strong>NOTA A PRAZO · CARTEIRA ESCOLAR</strong><span>SEM VALOR FISCAL</span></div>
+        <p>Registre um cliente fictício e uma data de vencimento. A operação vira uma conta a receber local, sem gerar boleto ou cobrança real.</p>
+        <div class="credit-grid">
+          <label>Cliente fictício<input id="credit-customer" maxlength="70" placeholder="Ex.: Cliente de treinamento" autocomplete="off"></label>
+          <label>Placa fictícia<input id="credit-plate" maxlength="14" placeholder="DEMO-001" autocomplete="off"></label>
+          <label>Vencimento<input id="credit-due" type="date"></label>
+          <label>Observações<input id="credit-notes" maxlength="170" placeholder="Ex.: prazo de 15 dias"></label>
+        </div>
+        <div class="credit-summary" id="credit-summary">Limite escolar por cliente: R$ 1.500,00</div>
+        <details><summary>Contas a receber desta simulação</summary><div id="credit-list"></div></details>
       </section>
       <p id="payment-error" class="form-error" role="alert"></p>
       <button id="finish-sale" type="button" class="button button-primary button-full" disabled>Concluir venda de treinamento <svg><use href="#i-check"></use></svg></button>

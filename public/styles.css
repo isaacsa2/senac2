@@ -434,3 +434,114 @@ body.scene-fullscreen-open{overflow:hidden}
   .scene-stage.is-gaming .scene-canvas canvas{touch-action:none}
   .game-touch-pad{z-index:15}
 }
+
+
+/* World V5 · Conveniência transitável, bicos, fila de veículos e caixa ERP */
+.scene-stage{background:radial-gradient(circle at 62% 25%,#f1f9f8 0%,#d9e8ef 56%,#b3d2d3 100%)}
+.scene-stage.night-mode{background:radial-gradient(circle at 54% 20%,#405e83,#1b2c47 62%,#102034)}
+.nozzle-dialog{width:min(550px,calc(100vw - 22px))}
+.nozzle-options{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:11px;margin:20px 0}
+.nozzle-option{background:linear-gradient(180deg,#fff,#eff5f0);border:2px solid #d8e5da;border-top:7px solid var(--nozzle-color,#4d8a65);border-radius:13px;text-align:left;padding:15px 12px;min-height:110px;color:#245740}
+.nozzle-option strong{display:block;font-size:12px;line-height:1.35}
+.nozzle-option small{display:block;color:#668270;margin-top:8px;font-size:10px;font-weight:750}
+.nozzle-option:hover,.nozzle-option:focus-visible{outline:2px solid #83c588;outline-offset:2px}
+.customer-hud{position:absolute;left:14px;top:67px;z-index:11;max-width:375px;width:calc(100% - 164px);background:#142d2bdd;border:1px solid #a0cba353;border-radius:14px;box-shadow:0 9px 26px #132d3160;padding:12px;color:#eff9e9;pointer-events:auto;display:flex;gap:10px;align-items:center;justify-content:space-between}
+.customer-hud>div:first-child{min-width:0}
+.customer-indicator{display:block;color:#c5e98f;font-size:9px;font-weight:900;letter-spacing:1.5px;margin-bottom:4px}
+.customer-hud strong{font:850 12px/1.3 Manrope,sans-serif;display:block}
+.customer-hud small{color:#d3e9d8;font-size:10px;line-height:1.25;display:block;margin-top:4px}
+.customer-buttons{flex:0 0 auto;display:flex;flex-direction:column;gap:5px}
+.customer-buttons button{border:0;border-radius:8px;background:#d8eeb9;color:#274936;padding:8px 9px;font-size:10px;font-weight:800}
+.customer-buttons button:disabled{opacity:.42;cursor:not-allowed}
+.payment-options{grid-template-columns:repeat(4,minmax(0,1fr))}
+.terminal-settings{margin-top:12px;padding:11px;border:1px solid #bad4c4;background:#f4f9f4;border-radius:10px}
+.terminal-settings label{font-size:10px!important;color:#54715d}
+.terminal-settings select{padding:9px;font-size:11px}
+.terminal-settings small{font-size:9px;line-height:1.5;display:block;margin-top:7px;color:#718374}
+#card-operation-group{margin:0 0 12px}
+#card-operation-group[hidden]{display:none}
+.terminal-status.error{background:#ffe1db;color:#983d36;border-color:#eca8a1}
+.payment-visual.is-inserting .card-virtual{animation:insert-card .7s ease-in-out}
+@keyframes insert-card{50%{transform:translate(-35px,113px) rotate(6deg) scale(.92)}}
+.cash-bills{display:grid;grid-template-columns:repeat(auto-fill,minmax(83px,1fr));gap:7px}
+.cash-bills .money-unit{background:var(--money-tint,#dde4df);border:2px solid #ffffffb5;color:#254a4b;box-shadow:0 1px 0 #71877870;font-size:11px;font-weight:900;padding:11px 7px;min-height:47px}
+.cash-bills .money-note{border-radius:7px;min-width:75px}
+.cash-bills .money-coin{width:75px;height:58px;max-width:100%;justify-self:center;border-radius:50%;font-size:10px;padding:7px}
+.cash-bills .money-unit:hover{transform:translateY(-2px);filter:brightness(1.04)}
+.cash-change-breakdown{margin:9px 0;background:#eaf4e9;border:1px solid #c7ddc6;padding:10px;border-radius:10px;color:#386749;font-size:11px;font-weight:750;line-height:1.5}
+.cash-change-breakdown:empty{display:none}
+.credit-section{padding:18px;border:1px solid #d4e1d2;border-radius:14px;background:#f6faf5;margin-bottom:13px}
+.credit-section[hidden]{display:none!important}
+.credit-head{display:flex;justify-content:space-between;gap:10px;align-items:center}
+.credit-head strong{font:900 12px Manrope,sans-serif;color:#336d4b}
+.credit-head span{font-size:8px;font-weight:900;letter-spacing:1px;color:#ac5639}
+.credit-section p{font-size:11px;line-height:1.55;margin:10px 0}
+.credit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px}
+.credit-grid label{font-size:11px;font-weight:900;color:#37664d;min-width:0}
+.credit-grid input{width:100%;border:1px solid #cfdfd2;border-radius:8px;background:#fff;padding:11px 9px;margin-top:6px;font-size:12px;min-height:41px}
+.credit-summary{padding:11px;background:#dcedd9;border-radius:9px;margin:14px 0;font-size:12px;font-weight:800;color:#326147}
+.credit-section details{border-top:1px solid #d1dfd1;padding-top:10px}
+.credit-section summary{cursor:pointer;font-size:12px;font-weight:900}
+.credit-item{display:flex;justify-content:space-between;align-items:center;gap:9px;border-bottom:1px solid #d8e4d6;padding:10px 0;color:#244b36}
+.credit-item strong{font-size:11px;display:block}
+.credit-item small{font-size:9px;color:#67836d}
+.credit-item span{font-size:9px;font-weight:900;color:#638a65}
+.credit-item button{border:1px solid #aecbad;border-radius:8px;background:#fff;color:#28623e;font-size:9px;font-weight:900;padding:6px 8px}
+.pos-computer{width:min(1080px,calc(100vw - 18px));max-height:91dvh;border:0;padding:0;border-radius:12px;box-shadow:0 35px 100px #0008;background:#edf2f5}
+.pos-computer .pos-computer-shell{max-height:91dvh;display:flex;flex-direction:column;color:#172d40;font-family:Arial,sans-serif}
+.pos-computer-head{display:flex;align-items:center;justify-content:space-between;padding:15px 21px;background:linear-gradient(110deg,#152f48,#214c67);color:#fff}
+.pos-computer-head>div{display:flex;flex-direction:column;gap:4px}
+.pos-computer-head span{font-size:9px;letter-spacing:2px;color:#a9d9eb;font-weight:800}
+.pos-computer-head strong{font-size:17px;letter-spacing:1px}
+.pos-computer-head button{border:0;border-radius:6px;background:#476781;color:#fff;font-size:20px;padding:6px 12px}
+.pos-computer-nav{display:flex;gap:2px;padding:0 16px;background:#284e6c;overflow:auto}
+.pos-computer-nav span{padding:12px 14px;background:#ffffff0b;color:#ecf6fa;font-size:10px;font-weight:900;white-space:nowrap}
+.pos-computer-nav span:first-child{border-bottom:3px solid #f1cf71}
+.pos-computer-content{display:grid;grid-template-columns:1fr 270px;min-height:330px;flex:1 1 auto;overflow:auto}
+.pos-computer-content>section{padding:21px;min-width:0}
+.pos-computer-subhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.pos-computer-subhead h3{font-size:16px;margin:0}
+.pos-computer-subhead small{font-size:11px;color:#677b89}
+.pos-computer-table{background:#fff;border:1px solid #d0dce3;border-radius:8px;margin-top:18px;overflow:auto;max-height:45dvh}
+.pos-computer-table table{width:100%;border-collapse:collapse;min-width:340px}
+.pos-computer-table th{background:#dce5ea;text-align:left;color:#425c6e;font-size:10px;padding:13px}
+.pos-computer-table td{border-bottom:1px solid #e6ecef;padding:12px;font-size:12px}
+.pos-computer-table td:last-child{text-align:right;font-weight:900}
+.pos-computer-side{background:#dfe8ee;border-left:1px solid #cad8e1;padding:23px;display:flex;flex-direction:column;gap:13px}
+.pos-computer-side>span{font-size:11px;letter-spacing:1.5px;font-weight:900;color:#5f7384}
+.pos-computer-side>strong{font-size:26px;color:#15374e}
+.pos-computer-side>div{background:#c9d7e1;padding:13px;font-size:11px;border-radius:8px}
+.pos-computer-side>div b{display:block;color:#1a6a5d;margin-top:5px}
+.pos-computer-side button{background:#275c7c;color:#fff;border:0;border-radius:7px;padding:13px;font-size:12px;font-weight:900}
+.pos-computer-side button:nth-of-type(2){background:#52778e}
+.pos-computer-side button:nth-of-type(3){background:#7b95a5}
+.pos-computer-side p{font-size:10px;line-height:1.5;color:#678092}
+.pos-computer footer{background:#153b55;color:#bed1de;padding:12px 17px;display:flex;justify-content:space-between;gap:10px;font-size:10px}
+@media(max-width:760px){
+  .customer-hud{width:calc(100% - 128px);max-width:260px;top:82px;left:9px;padding:9px;flex-direction:column;align-items:stretch}
+  .customer-buttons{flex-direction:row}
+  .customer-buttons button{flex:1}
+  .payment-options{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .pos-computer-content{grid-template-columns:1fr}
+  .pos-computer-side{border-left:0;border-top:1px solid #cad8e1;display:grid;grid-template-columns:repeat(2,1fr);gap:8px;padding:13px}
+  .pos-computer-side>span,.pos-computer-side>strong,.pos-computer-side>div,.pos-computer-side>p{grid-column:1/-1}
+  .credit-grid{grid-template-columns:1fr}
+}
+@media(max-width:440px){
+  .customer-hud{top:102px;max-width:212px;padding:8px}
+  .customer-hud strong{font-size:10px}
+  .customer-hud small{font-size:9px}
+  .customer-hud .customer-buttons button{font-size:9px;padding:6px}
+  .cash-bills{grid-template-columns:repeat(4,minmax(0,1fr));gap:4px}
+  .cash-bills .money-unit{font-size:9px;padding:8px 3px;min-width:0}
+  .cash-bills .money-coin{width:61px;height:55px}
+  .pos-computer-head strong{font-size:13px}
+  .pos-computer-nav span{padding:11px 8px;font-size:9px}
+  .pos-computer-content>section{padding:10px}
+  .pos-computer-side>strong{font-size:22px}
+}
+@media(orientation:landscape) and (max-height:500px){.customer-hud{top:8px;left:8px;max-width:275px}.pos-computer .pos-computer-shell{max-height:95dvh}.pos-computer-content{min-height:200px}}
+@media(prefers-reduced-motion:reduce){
+  .cash-bills .money-unit:hover{transform:none}
+  .payment-visual.is-inserting .card-virtual{animation:none}
+}

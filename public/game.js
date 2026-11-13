@@ -1,15 +1,21 @@
 import * as THREE from 'three';
+import {createVehicle} from './world-extra.js';
 
 // Simulação educativa leve: o mundo 3D fica sob responsabilidade de scene.js.
 // Esta camada implementa personagem, proximidade, missões e abastecimento.
 const $=id=>document.getElementById(id);
 const pumpList=[
-  {id:'gasolina-comum',name:'Gasolina Comum',x:-6.15,z:-2.95,type:'flex'},
-  {id:'gasolina-nitro',name:'Shell V-Power Nitro+',x:-3.05,z:-2.95,type:'flex'},
-  {id:'gasolina-racing',name:'Shell V-Power Racing',x:.05,z:-2.95,type:'flex'},
-  {id:'etanol-comum',name:'Etanol Comum',x:-6.15,z:-.40,type:'flex'},
-  {id:'diesel-s10',name:'Diesel S10',x:-3.05,z:-.40,type:'diesel'},
-  {id:'diesel-s500',name:'Diesel S500',x:.05,z:-.40,type:'diesel-antigo'}
+ {id:'gasolina-comum',name:'Gasolina Comum',x:-5.45,z:-1.40,type:'flex',island:'FLEX',color:'#68af79'},
+ {id:'gasolina-nitro',name:'Shell V-Power Nitro+',x:-5.45,z:-1.40,type:'flex',island:'FLEX',color:'#db7164'},
+ {id:'etanol-comum',name:'Etanol Comum',x:-5.45,z:-1.40,type:'flex',island:'FLEX',color:'#e8ba4f'},
+ {id:'diesel-s10',name:'Diesel S10',x:-2.40,z:-1.40,type:'diesel',island:'DIESEL',color:'#428ac4'},
+ {id:'diesel-s500',name:'Diesel S500',x:-2.40,z:-1.40,type:'diesel-antigo',island:'DIESEL',color:'#617d91'},
+ {id:'gasolina-racing',name:'Shell V-Power Racing',x:.65,z:-1.40,type:'flex',island:'PREMIUM',color:'#b93f44'}
+];
+const pumpIslands=[
+ {id:'FLEX',label:'Bomba flex · 3 bicos',x:-5.45,z:-1.40},
+ {id:'DIESEL',label:'Bomba diesel · 2 bicos',x:-2.40,z:-1.40},
+ {id:'PREMIUM',label:'Bomba premium · bico Racing',x:.65,z:-1.40}
 ];
 const productPhotos={
   coca:'https://santaluzia.vtexassets.com/arquivos/ids/997380/556297.jpg?v=638525861586730000',
@@ -24,6 +30,7 @@ function initialise(){
   started=true;
   const ctx=window.ecoScene.getContext();
   const {scene,world,stage}=ctx;
+  const sim=window.ECO_SIM;
   const cameraRig={yaw:.56,pitch:.56,distance:7.4,firstPerson:false,dragging:false,pointerId:null,lastX:0,lastY:0};
   const cameraRay=new THREE.Raycaster();
   const player=new THREE.Group();
@@ -50,6 +57,8 @@ function initialise(){
   const cam=new THREE.PerspectiveCamera(58,1,.12,95);
   const states={active:false, keys:new Set(), near:null, runs:0, liters:0, afterSound:false, audio:null};
   const dialog=$('fuel-dialog');
+  const nozzleDialog=$('nozzle-dialog');
+  let customerSerial=0,currentCar=null,completedCars=0;
   const controls=$('game-touch-pad');
   const movement={forward:[0,-1],back:[0,1],left:[-1,0],right:[1,0]};
   let lastFrame=0,animId=null, filling=null, fuelSequence=0;
@@ -173,41 +182,171 @@ function initialise(){
     soundButton.textContent='Som: '+(states.afterSound?'ligado':'desligado');
     beep();
   });
+  function customerFuel(){
+    return currentCar?pumpList.find(x=>x.id===currentCar.order.id):null;
+  }
   function nearest(){
-    let best=null, dMin=Infinity;
-    for(const pump of pumpList){
-      const d=Math.hypot(player.position.x-pump.x,player.position.z-pump.z);
-      if(d<2.15&&d<dMin){best={kind:'pump',pump,label:'Abastecer: '+pump.name};dMin=d;}
+    let best=null,dMin=Infinity;
+    for(const island of pumpIslands){
+      const d=Math.hypot(player.position.x-island.x,player.position.z-island.z);
+      if(d<2.35&&d<dMin){best={kind:'pump-island',island,label:'Escolher bico · '+island.label};dMin=d;}
     }
-    // Terminais de pagamento reais na maquete: maquininha de pista e PC do caixa.
     const laneTerminal=Math.hypot(player.position.x-2.74,player.position.z-1.86);
-    if(laneTerminal<1.48&&laneTerminal<dMin){
-      best={kind:'payment',label:'Usar maquininha de pista · E'};dMin=laneTerminal;
-    }
-    const cashierPC=Math.hypot(player.position.x+1.5,player.position.z+5.45);
-    if(cashierPC<1.16&&cashierPC<dMin){
-      best={kind:'payment',label:'Usar computador do caixa · E'};dMin=cashierPC;
-    }
-    const shopDist=Math.hypot(player.position.x+2.85,player.position.z+5.9);
-    if(shopDist<2.75&&shopDist<dMin){best={kind:'shop',label:'Entrar na conveniência'};dMin=shopDist;}
+    if(laneTerminal<1.45&&laneTerminal<dMin){best={kind:'payment',label:'Usar maquininha na pista'};dMin=laneTerminal;}
+    const cashier=Math.hypot(player.position.x+1.65,player.position.z+8.02);
+    if(cashier<2.25&&cashier<dMin){best={kind:'computer',label:'Operar PC do caixa'};dMin=cashier;}
+    const entrance=Math.hypot(player.position.x+2.84,player.position.z+6.60);
+    if(entrance<1.4&&entrance<dMin){best={kind:'shop',label:'Conhecer a loja de conveniência'};dMin=entrance;}
+    const shelves=Math.hypot(player.position.x+4.15,player.position.z+8.10);
+    if(shelves<1.42&&shelves<dMin){best={kind:'shop',label:'Escolher produtos das prateleiras'};dMin=shelves;}
     const oilDist=Math.hypot(player.position.x-6.5,player.position.z-1.35);
     if(oilDist<3.15&&oilDist<dMin){best={kind:'oleo',label:'Visitar a troca de óleo'};dMin=oilDist;}
     return best;
   }
-  function updateHud(){
+  function carStatus(text,badge='ATENDIMENTO'){
+    $('customer-indicator').textContent=badge;
+    $('customer-request').textContent=text;
+  }
+  function updateCustomerHUD(){
+    const bar=$('customer-hud');if(!bar)return;
+    if(!currentCar){
+      $('customer-summary').textContent='Sem veículo na pista';
+      carStatus('Chame um veículo para atender.','AGUARDANDO');
+      $('customer-next').disabled=false;$('customer-release').disabled=true;return;
+    }
+    const {order,state}=currentCar;
+    $('customer-summary').textContent=order.vehicle+' • '+order.plate;
+    const fuel=customerFuel();
+    const price=window.ecoCatalog?.fuelProducts?.find(p=>p.id===order.id)?.price||0;
+    const request=order.orderType==='valor'?'R$ 50,00 em '+fuel?.name
+      :order.orderType==='completar'?'Completar tanque • '+fuel?.name
+      :order.requested+' L de '+fuel?.name;
+    const statuses={arriving:'Veículo chegando à bomba…',parked:'Pedido: '+request,
+      filled:'Abastecido: '+order.filled.toFixed(1).replace('.',',')+' L · Receber no caixa',
+      paid:'Venda registrada · liberar veículo',leaving:'Veículo saindo do posto…'};
+    carStatus(statuses[state]||request,state==='paid'?'CONCLUÍDO':state==='filled'?'PAGAMENTO':state==='arriving'?'CHEGANDO':state==='leaving'?'SAINDO':'CLIENTE');
+    $('customer-next').disabled=true;
+    $('customer-release').disabled=state!=='paid';
+  }
+  function createQueueCar(){
+    if(currentCar||!sim)return;
+    const order=sim.createCustomer(customerSerial++);
+    const fuel=pumpList.find(p=>p.id===order.id);
+    const group=createVehicle(['#438eb1','#e2d6be','#7c9b84','#e4e8e8','#a8494c','#677485'][customerSerial%6],
+      order.kind==='diesel'||order.kind==='diesel-antigo'?'pickup':'car');
+    group.position.set(-16,.18,5.2);
+    group.rotation.y=0;
+    world.add(group);
+    currentCar={order,group,state:'arriving',island:fuel.island,driveTarget:{x:fuel.x,z:2.50},pathIndex:0,
+      path:[{x:fuel.x,z:5.2},{x:fuel.x,z:2.5}],leavingPath:[]};
+    updateCustomerHUD();ctx.requestRender();
+  }
+  function moveCarTo(target,dt){
+    if(!currentCar)return true;
+    const {group}=currentCar;
+    const dx=target.x-group.position.x,dz=target.z-group.position.z;
+    const distance=Math.hypot(dx,dz);
+    if(distance<.06){group.position.x=target.x;group.position.z=target.z;return true;}
+    const rate=Math.min(distance,3.2*dt);
+    group.rotation.y=Math.atan2(dx,dz)-Math.PI/2;
+    group.position.x+=dx/distance*rate;group.position.z+=dz/distance*rate;
+    for(const wheel of group.userData.wheels||[])wheel.rotation.z-=rate/.35;
+    return false;
+  }
+  function animateCustomer(dt){
+    if(!currentCar)return false;
+    const c=currentCar;
+    if(c.state==='arriving'){
+      if(moveCarTo(c.path[c.pathIndex],dt)){
+        c.pathIndex++;
+        if(c.pathIndex>=c.path.length){c.state='parked';updateCustomerHUD();}
+      }
+      return true;
+    }
+    if(c.state==='leaving'){
+      if(moveCarTo(c.leavingPath[c.pathIndex],dt)){
+        c.pathIndex++;
+        if(c.pathIndex>=c.leavingPath.length){
+          world.remove(c.group);
+          c.group.traverse(m=>{
+            if(m.isMesh){m.geometry?.dispose?.();}
+          });
+          currentCar=null;completedCars++;updateCustomerHUD();
+        }
+      }
+      return true;
+    }
+    return false;
+  }
+  function releaseCar(){
+    if(!currentCar||currentCar.state!=='paid')return;
+    currentCar.state='leaving';currentCar.pathIndex=0;
+    currentCar.leavingPath=[{x:currentCar.group.position.x,z:5.2},{x:16,z:5.2}];
+    updateCustomerHUD();
+  }
+  function selectNozzle(island){
+    const fuel=pumpList.filter(p=>p.island===island.id);
+    $('nozzle-title').textContent='Bomba '+island.label+' — escolha o bico';
+    $('nozzle-options').replaceChildren();
+    const wanted=customerFuel()?.id;
+    for(const pump of fuel){
+      const btn=document.createElement('button');
+      btn.type='button';btn.className='nozzle-option';
+      btn.style.setProperty('--nozzle-color',pump.color);
+      const name=document.createElement('strong');name.textContent=pump.name;
+      const label=document.createElement('small');label.textContent='Bico '+(fuel.indexOf(pump)+1)+(wanted===pump.id?' · pedido do cliente':'');
+      btn.append(name,label);
+      btn.addEventListener('click',()=>{
+        if(currentCar&&currentCar.state!=='parked'){
+          $('nozzle-warning').textContent='O veículo ainda não está pronto para abastecimento.';return;
+        }
+        if(currentCar&&pump.id!==wanted){
+          $('nozzle-warning').textContent='Bico incorreto para o pedido do cliente. Selecione '+customerFuel()?.name+'.';return;
+        }
+        nozzleDialog.close();openFuel(pump);
+      });
+      $('nozzle-options').append(btn);
+    }
+    $('nozzle-warning').textContent='Escolha pelo combustível solicitado; não misture gasolina e diesel.';
+    nozzleDialog.showModal();
+  }
+  $('nozzle-close').addEventListener('click',()=>nozzleDialog.close());
+  $('customer-next').addEventListener('click',createQueueCar);
+  $('customer-release').addEventListener('click',releaseCar);
+  window.addEventListener('ecoposto:sale-complete',event=>{
+    if(!currentCar||currentCar.state!=='filled')return;
+    const ids=event.detail?.productIds;
+    if(!Array.isArray(ids)||!ids.includes(currentCar.order.id))return;
+    currentCar.state='paid';currentCar.order.paid=true;
+    updateCustomerHUD();ctx.requestRender();
+  });
+    function updateHud(){
     if(!states.active)return;
     const near=nearest();states.near=near;
     $('game-interact').disabled=!near;
     $('game-action-label').textContent=near?near.label:'Explore o posto com WASD ou setas';
-    $('game-progress').textContent=states.runs?('Atendimentos: '+states.runs+' · '+states.liters.toLocaleString('pt-BR')+' L abastecidos'):'Missão: abasteça o primeiro veículo';
+    $('game-progress').textContent='Atendidos: '+completedCars+' • Abastecimentos: '+states.runs+' • '+states.liters.toLocaleString('pt-BR')+' L';
   }
   function isBlocked(x,z){
-    if(x<-10.2||x>10.5||z<-12.3||z>6.3)return true;
+    if(x<-27||x>27||z<-26||z>26)return true;
+    if(z<-17.5&&z>-22.8&&x>-15&&x<15)return true;
+    if(z>21.3&&z<26&&x>-17&&x<17.5)return true;
     // A loja tem vitrine, portanto não é atravessável. Interação ocorre na entrada.
-    if(x>-5.5&&x<-.15&&z<-6.38&&z>-10.7)return true;
+    // Loja com corredor real: atravessa a abertura central da porta.
+    if(x>-5.12&&x<-.49&&z<-10.39&&z>-6.75){
+      if(z<-10.20)return true;
+      if(x<-4.86||x>-.62)return true;
+      // corredores livres; evita atravessar prateleiras e o caixa
+      if(x<-3.65&&z<-7.72&&z>-9.45)return true;
+      if(x>-2.32&&z<-7.70&&z>-8.75)return true;
+      return false;
+    }
+    if(z<-6.52&&z>-6.83&&x>-5.12&&x<-.49&&!(x>-3.70&&x<-2.42))return true;
+    if(z<-10.38&&x>-5.12&&x<-.49)return true;
     if(Math.abs(x-2.74)<.34&&Math.abs(z-1.86)<.30)return true;
+    if(currentCar&&currentCar.state!=='leaving'&&Math.abs(x-currentCar.group.position.x)<1.45&&Math.abs(z-currentCar.group.position.z)<.83)return true;
     // Bombas físicas e pilares da estrutura.
-    for(const pump of pumpList)if(Math.abs(x-pump.x)<.53&&Math.abs(z-pump.z)<.48)return true;
+    for(const island of pumpIslands)if(Math.abs(x-island.x)<.56&&Math.abs(z-island.z)<.50)return true;
     return false;
   }
   function move(delta){
@@ -265,7 +404,10 @@ function initialise(){
     if(!document.hidden){
       const moved=move(dt);
       const cameraMoving=updateCamera(dt);
-      if(moved||cameraMoving)ctx.requestRender();
+      const carMoved=animateCustomer(dt);
+      const closeToDoor=Math.hypot(player.position.x+2.84,player.position.z+6.65)<2.15 || (player.position.z<-6.75&&player.position.z>-10.40&&player.position.x>-5.1&&player.position.x<-.5);
+      window.ecoScene.setShopOpen?.(states.active&&closeToDoor);
+      if(moved||cameraMoving||carMoved)ctx.requestRender();
       if(moved){ctx.stage.classList.add('game-moving');}
       else ctx.stage.classList.remove('game-moving');
       if(moved||!states.near){updateHud();updateMini();}
@@ -288,13 +430,15 @@ function initialise(){
     ctx.controls.enabled=false;
     window.ecoScene.setActiveCamera(cam);
     lastFrame=0;
-    updateHud();updateMini();
+    updateHud();updateMini();updateCustomerHUD();
+    if(!currentCar)createQueueCar();
     animId=requestAnimationFrame(tick);
     ctx.requestRender();
   }
   function stop(){
     if(!states.active)return;
     states.active=false;states.keys.clear();cameraRig.dragging=false;cameraRig.pointerId=null;
+    window.ecoScene.setShopOpen?.(false);
     cancelAnimationFrame(animId);animId=null;
     player.visible=false;
     stage.classList.remove('is-gaming','game-moving');
@@ -310,8 +454,9 @@ function initialise(){
   function interact(){
     if(!states.active)return;
     const here=nearest();if(!here)return;
-    if(here.kind==='pump')openFuel(here.pump);
+    if(here.kind==='pump-island')selectNozzle(here.island);
     else if(here.kind==='payment')window.dispatchEvent(new Event('ecoposto:open-payment'));
+    else if(here.kind==='computer')window.dispatchEvent(new Event('ecoposto:open-pos'));
     else renderShop(here.kind);
   }
   $('start-game').addEventListener('click',start);
@@ -382,7 +527,12 @@ function initialise(){
     $('fuel-product-name').textContent=product.name;
     $('fuel-unit-price').textContent=money(product.price)+' / L';
     vehicle.value=pump.type==='flex'?'flex':pump.type==='diesel-antigo'?'diesel-antigo':'diesel';
-    targetInput.value='20';targetInput.max=pump.type==='flex'?'80':'200';
+    // Pedido realista: valor em reais, litros ou completar tanque.
+    const selected=currentCar?.state==='parked'&&currentCar.order.id===pump.id?currentCar.order:null;
+    const price=product.price;
+    const amount=selected?(selected.orderType==='valor'?Math.round(5000/price):
+      selected.orderType==='completar'?Math.max(1,selected.capacity-selected.tank):selected.requested):20;
+    targetInput.value=String(amount);targetInput.max=pump.type==='flex'?'80':'200';
     targetInput.disabled=false;vehicle.disabled=false;
     $('fuel-error').textContent='';
     $('fuel-start').textContent='Iniciar abastecimento';
@@ -463,6 +613,11 @@ function initialise(){
     window.dispatchEvent(new CustomEvent('ecoposto:fill-complete',{detail:{id:filling.product.id,litres}}));
     states.runs+=1;
     states.liters=Math.round((states.liters+litres)*10)/10;
+    if(currentCar?.state==='parked'&&currentCar.order.id===filling.product.id){
+      currentCar.order.filled=litres;
+      currentCar.order.tank=Math.min(currentCar.order.capacity,currentCar.order.tank+litres);
+      currentCar.state='filled';updateCustomerHUD();
+    }
     beep(950,.18);
     dialog.close();
     filling=null;
@@ -480,7 +635,9 @@ function initialise(){
     if(filling){filling.running=false;filling=null;fuelSequence++;}
   });
   // Exibição pública mínima para testes automatizados de jogabilidade.
-  window.ecoGame={start,stop,interact,isActive:()=>states.active,near:()=>nearest(),getPumpIds:()=>pumpList.map(p=>p.id)};
+  window.ecoGame={start,stop,interact,isActive:()=>states.active,near:()=>nearest(),
+    getPumpIds:()=>pumpList.map(p=>p.id),getIslands:()=>pumpIslands.map(x=>x.id),
+    currentCustomer:()=>currentCar?.order||null,spawnCustomer:createQueueCar};
 }
 if(window.ecoScene)initialise();
 else window.addEventListener('ecoposto:scene-ready',initialise,{once:true});

@@ -16,7 +16,9 @@ test('scripts are syntactically valid',()=>{
 test('six pumps and six user-specified fuel IDs are present',()=>{
  const ids=['gasolina-comum','gasolina-nitro','gasolina-racing','etanol-comum','diesel-s10','diesel-s500'];
  for(const id of ids){assert.match(app,new RegExp("id:'"+id+"'"));assert.match(game,new RegExp("id:'"+id+"'"));}
- assert.equal((scene.match(/^\s*dispenser\(/gm)||[]).length,6);
+ assert.equal((scene.match(/for\(const island of islands\)dispenser\(island\)/g)||[]).length,1);
+ assert.match(scene,/title:'FLEX'/);assert.match(scene,/title:'DIESEL'/);assert.match(scene,/title:'PREMIUM'/);
+ assert.match(scene,/3 BICOS/);assert.match(scene,/2 BICOS/);assert.match(scene,/1 BICO/);
 });
 test('backend-less 3D and game have all expected UI elements',()=>{
  const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
@@ -103,4 +105,57 @@ test('new scene modules keep their JavaScript syntax valid',()=>{
   for(const path of ['public/scene.js','public/game.js','public/app.js']){
     assert.doesNotThrow(()=>new Script(read(path).replace(/^import\s+.*?;\s*$/gm,''),{filename:path}));
   }
+});
+
+
+test('Brazilian cash, card failure simulation, credit ledger',()=>{
+ const store=new Map(),scope={window:{},Date,Math,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)}};
+ runInNewContext(read('public/sim-core.js'),scope);
+ const sim=scope.window.ECO_SIM;
+ assert.equal(sim.DENOMS.length,13);
+ assert.equal(sim.DENOMS.filter(x=>x.kind==='note').length,7);
+ assert.equal(sim.DENOMS.filter(x=>x.kind==='coin').length,6);
+ for(const cents of [1,7,89,121,2189,10433,19999]){
+   assert.equal(sim.denominationsValue(sim.changeFor(cents)),cents);
+ }
+ sim.setConfig({forced:'read_error'});
+ assert.equal(sim.machineOutcome().code,'read_error');
+ sim.setConfig({forced:'approved'});
+ assert.equal(sim.machineOutcome().ok,true);
+ const d=new Date();d.setDate(d.getDate()+30);
+ const due=d.toISOString().slice(0,10);
+ const item=sim.saveCredit({customer:'Cliente Demo',due,amount:4999,plate:'DEMO-001'});
+ assert.equal(item.status,'open');
+ assert.equal(sim.receivables().length,1);
+ assert.equal(sim.settleCredit(item.id),true);
+ assert.equal(sim.receivables()[0].status,'paid');
+ assert.throws(()=>sim.saveCredit({customer:'Cliente Demo',due,amount:170000}));
+ assert.equal(sim.createCustomer(3).kind,'diesel');
+});
+test('Brazilian pump islands, interior and surrounding animation',()=>{
+ const world=read('public/world-extra.js');
+ for(const id of ['nozzle-dialog','nozzle-options','customer-hud','customer-next','customer-release','credit-group','pos-computer','pos-open-payment','machine-scenario','card-operation','cash-denominations']){
+   assert.match(html,new RegExp('id="'+id+'"'));
+ }
+ assert.match(html,/src="\.\/sim-core\.js"/);
+ assert.match(scene,/createDistrict/);assert.match(scene,/shopDoors/);
+ assert.match(scene,/setShopOpen/);assert.match(scene,/function animateAmbient/);
+ assert.match(game,/function createQueueCar/);
+ assert.match(game,/function animateCustomer/);
+ assert.match(game,/function selectNozzle/);
+ assert.match(game,/function releaseCar/);
+ assert.match(game,/ecoposto:sale-complete/);
+ for(const token of ['createVehicle','ambientCar','function building','walking','clouds']){
+   assert.ok(world.includes(token));
+ }
+});
+test('new modules compile and existing checkout workflow survives',()=>{
+ for(const path of ['public/world-extra.js','public/sim-core.js']){
+   assert.doesNotThrow(()=>new Script(read(path).replace(/^import\s+.*?;\s*$/gm,'').replace(/^export\s+/gm,''),{filename:path}));
+ }
+ assert.match(app,/sim\.machineOutcome\(\)/);
+ assert.match(app,/sim\.saveCredit\(/);
+ assert.match(app,/sim\.changeFor\(/);
+ assert.match(app,/function openPosComputer\(/);
+ assert.match(app,/ecoposto:sale-complete/);
 });

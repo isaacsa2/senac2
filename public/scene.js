@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { createDistrict } from './world-extra.js';
 
 // Posto-escola 3D com materiais físicos, texturas procedurais e detalhes de pista leves.
 // Mantém as posições originais das bombas e os eventos usados pelo PDV.
@@ -32,12 +33,13 @@ function makeLabel(text, foreground='#fff', background=null, fontSize=66) {
   return new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide,depthWrite:false});
 }
 let renderer, camera, controls, world, scene, renderQueued=false, activeCamera=null, daylight, sunLight;
-let lamps=[],qualityMode='auto',cameraObstacles=[];
+let lamps=[],qualityMode='auto',cameraObstacles=[],district=null,shopDoors=[];
+let ambientLast=0,ambientId=0,ambientVisible=true;
 let anchors=[];
 function buildScene(){
   scene=new THREE.Scene();
   scene.background=null;
-  scene.fog=new THREE.Fog('#d9e7df',29,57);
+  scene.fog=new THREE.Fog('#d9e7df',35,78);
   world=new THREE.Group();scene.add(world);
   daylight=new THREE.HemisphereLight('#edf6ff','#65866a',1.45);scene.add(daylight);
   sunLight=new THREE.DirectionalLight('#fff3d6',2.15);
@@ -133,101 +135,132 @@ function buildScene(){
     panel.rotation.z=-.045;
     box(.055,.055,1.43,-6.5+i*1.78,4.45,-2.8+j*1.72,color('#85b7bd'));
   }
-  // Bombas com bicos, telas, mangueiras e cores distintas
-  function dispenser(x,z,accent,name){
-    ellipseShadow(x,z,.62,.54,.09);
-    box(1.06,.16,.78,x,.35,z,palette.gray);
-    box(.94,2.1,.64,x,1.45,z,palette.white);
-    box(1.00,.22,.72,x,2.58,z,accent);
-    box(.68,.61,.037,x,2.10,z+.34,palette.darkGlass);
-    box(.65,.44,.048,x,2.15,z+.366,palette.screen);
-    box(.47,.15,.043,x,2.20,z+.394,color('#dcf6e1'));
-    box(.39,.11,.046,x,1.97,z+.397,color('#a1c9c9'));
-    planeLabel('R$   0,00',.55,.13,x,2.28,z+.424,'#1c6043',null,50);
-    planeLabel('L     0,00',.55,.12,x,2.06,z+.425,'#1c6043',null,51);
-    box(.72,.12,.039,x,1.59,z+.341,accent);
-    planeLabel(name,.64,.18,x,1.59,z+.37,'#fff',null,73);
-    for(const dx of [-.2,.2]){
-      box(.11,.35,.06,x+dx,1.09,z+.37,palette.dark);
-      box(.08,.14,.15,x+dx,1.20,z+.44,accent);
-    }
-    const path=new THREE.CatmullRomCurve3([
-      new THREE.Vector3(x+.43,1.9,z+.25),
-      new THREE.Vector3(x+.76,1.5,z+.25),
-      new THREE.Vector3(x+.75,.9,z+.26),
-      new THREE.Vector3(x+.54,.7,z+.3)]);
-    world.add(new THREE.Mesh(new THREE.TubeGeometry(path,16,.035,5,false),palette.wheels));
-    cylinder(.055,.055,.15,x+.54,.71,z+.3,palette.dark);
+  // Posto brasileiro: três ILHAS físicas e seis produtos em seis bicos.
+  // Ilha mista: comum, aditivada, etanol; ilha diesel: S10/S500; ilha premium: Racing.
+  const islands=[
+    {x:-5.45,z:-1.40,title:'FLEX',fuel:[['COMUM','#6ebc84'],['ADITIVADA','#db7067'],['ETANOL','#ddb959']]},
+    {x:-2.40,z:-1.40,title:'DIESEL',fuel:[['S10','#4b9bcc'],['S500','#6f839a']]},
+    {x:.65,z:-1.40,title:'PREMIUM',fuel:[['RACING','#bc3a44']]}
+  ];
+  function dispenser(island){
+    const {x,z,title,fuel}=island;
+    ellipseShadow(x,z,.66,.60,.08);
+    box(1.15,.17,.83,x,.37,z,palette.gray);
+    box(1.03,2.18,.72,x,1.52,z,palette.white);
+    box(1.08,.24,.83,x,2.69,z,palette.trim);
+    box(.82,.66,.055,x,2.18,z+.388,palette.dark);
+    box(.71,.42,.059,x,2.20,z+.424,palette.screen);
+    planeLabel('R$  0,00',.63,.14,x,2.26,z+.464,'#245b39',null,51);
+    planeLabel('L    0,00',.63,.12,x,2.08,z+.464,'#245b39',null,50);
+    planeLabel(title,.89,.16,x,1.69,z+.375,'#ffffff','#21674d',68);
+    fuel.forEach(([name,hex],i)=>{
+      const dx=(i-(fuel.length-1)/2)*.29;
+      const material=color(hex);
+      box(.25,.11,.075,x+dx,1.38,z+.399,material);
+      planeLabel(name,.29,.12,x+dx,1.39,z+.442,'#ffffff',hex,48);
+      box(.09,.33,.08,x+dx,1.01,z+.40,palette.dark);
+      box(.10,.16,.13,x+dx,1.17,z+.47,material);
+      const path=new THREE.CatmullRomCurve3([
+        new THREE.Vector3(x+dx,1.06,z+.42),
+        new THREE.Vector3(x+dx+.20,.77,z+.58),
+        new THREE.Vector3(x+dx+.12,.55,z+.60),
+        new THREE.Vector3(x+dx+.02,.68,z+.46)]);
+      world.add(new THREE.Mesh(new THREE.TubeGeometry(path,9,.019,4,false),palette.wheels));
+    });
+    box(.86,.11,.08,x,.65,z+.41,palette.metal);
+    for(const side of [-.54,.54])box(.09,1.16,.07,x+side,1.28,z-.08,palette.metal);
+    planeLabel(title==='FLEX'?'3 BICOS':title==='DIESEL'?'2 BICOS':'1 BICO',
+      .78,.12,x,.84,z+.423,'#285c45',null,50);
   }
-  // Seis bombas: correspondem exatamente aos seis combustíveis usados no catálogo.
-  // Duas fileiras de três, mantendo a contagem de objetos baixa para aparelhos modestos.
-  dispenser(-6.15,-2.95,color('#5eaa7d'),'COMUM');
-  dispenser(-3.05,-2.95,color('#c65c56'),'NITRO+');
-  dispenser(.05,-2.95,color('#b94143'),'RACING');
-  dispenser(-6.15,-.40,color('#d8b359'),'ETANOL');
-  dispenser(-3.05,-.40,color('#518bb7'),'S10');
-  dispenser(.05,-.40,color('#6d879a'),'S500');
-  // Conveniência atrás do posto, com vitrine e produtos em exibição.
-  // O grupo permite mover o edifício inteiro sem afetar as coordenadas internas.
+  for(const island of islands)dispenser(island);
+  // Drenagem, defensas e demarcações de cada ilha.
+  for(const island of islands){
+    box(1.65,.14,1.42,island.x,.23,island.z,color('#d1d8ce'));
+    for(const side of [-.85,.85]){
+      cylinder(.09,.09,.72,island.x+side,.60,island.z+.50,palette.gold,8);
+    }
+    box(2.15,.018,.06,island.x,.215,1.25,color('#f8db9b'));
+  }
+  // Loja transitável: paredes e vitrines com porta de correr, corredor, caixa e produtos.
   const shopFirst=world.children.length;
-  ellipseShadow(5.27,-2.47,2.8,2.25,.095);
-  const convenienceShell=box(4.6,2.85,3.65,5.27,1.66,-2.50,palette.white);
-  cameraObstacles.push(convenienceShell);
-  box(4.92,.3,4.0,5.27,3.23,-2.50,palette.trim);
-  box(4.98,.11,4.06,5.27,3.43,-2.5,palette.lime);
-  box(4.65,.64,.13,5.27,2.65,-.61,palette.green);
-  planeLabel('CONVENIÊNCIA',3.45,.42,5.27,2.67,-.53,'#ffffff',null,74);
-  box(2.25,1.64,.065,4.15,1.31,-.635,palette.darkGlass);
-  box(2.04,1.42,.072,4.15,1.33,-.58,palette.glass);
-  box(.095,1.51,.09,4.15,1.3,-.53,palette.white);
-  box(1.12,1.75,.07,6.84,1.24,-.62,palette.darkGlass);
-  box(.96,1.60,.076,6.84,1.26,-.55,palette.glass);
-  box(.09,.1,.1,6.44,1.28,-.48,palette.white);
-  box(4.56,.14,.65,5.27,.35,-.22,palette.gray);
-  box(3.15,.16,.14,5.27,2.23,-.51,color('#f8cf70'));
-  for(const x of [3.4,4.9,5.85])box(.30,.21,.07,x,1.13,-.49,color('#fdf9e0'));
-  // Detalhes de vidro, iluminação de loja e balcão: visual de posto urbano.
-  box(2.00,1.48,.025,4.15,1.29,-.525,palette.glass);
-  box(.92,1.51,.024,6.84,1.26,-.506,palette.glass);
-  box(2.95,.06,.30,5.2,2.20,-.44,palette.led);
-  // PC de caixa completo: monitor, tela de PDV, base, teclado, impressora e leitor.
-  box(.77,.53,.10,6.02,1.40,.36,palette.dark);
-  box(.63,.41,.017,6.02,1.41,.419,palette.screen);
-  planeLabel('ECO PDV',.49,.12,6.02,1.47,.435,'#1d5b38',null,58);
-  planeLabel('CAIXA 01',.44,.10,6.02,1.34,.435,'#1d5b38',null,51);
-  box(.08,.19,.07,6.02,1.05,.34,palette.metal);
-  box(.37,.035,.21,6.02,.96,.55,palette.dark);
-  box(.47,.048,.16,6.02,.91,.83,palette.metal);
-  for(let i=0;i<6;i++)for(let j=0;j<2;j++)box(.052,.006,.029,5.84+i*.072,.94,.785+j*.07,palette.gray);
-  box(.36,.26,.26,5.25,1.00,.7,palette.dark);
-  box(.30,.07,.25,5.25,1.16,.7,palette.metal);
-  box(.27,.18,.018,5.25,1.25,.84,palette.white);
-  // Expositor de conveniência com latas, garrafas e embalagens modeladas.
-  box(3.55,.12,.58,5.15,.6,.38,palette.white);
-  box(3.55,.11,.58,5.15,1.2,.38,palette.white);
-  box(3.55,.11,.58,5.15,1.82,.38,palette.white);
-  for(const x of [3.58,4.13,4.68,5.23,5.78,6.33]){
-    const c=x<5.15?color('#dc3d34'):color('#436aab');
-    for(const y of [.8,1.4,2.02]){
-      cylinder(.115,.115,.35,x,y,.45,c,10);
-      cylinder(.122,.122,.028,x,y+.19,.45,palette.white,10);
-      planeLabel(x<5.15?'Coca-Cola':'Red Bull',.34,.15,x,y,.58,'#ffffff',null,47);
+  ellipseShadow(5.27,-2.48,2.8,2.20,.06);
+  const shellMat=color('#f4f1e8'),tile=color('#d6d7cf'),darkFrame=color('#3a554f');
+  box(4.62,.22,3.74,5.27,.30,-2.51,tile);
+  cameraObstacles.push(box(4.68,2.82,.12,5.27,1.69,-4.36,shellMat));
+  cameraObstacles.push(box(.12,2.82,3.65,2.95,1.69,-2.50,shellMat));
+  cameraObstacles.push(box(.12,2.82,3.65,7.59,1.69,-2.50,shellMat));
+  // Fachada de vidro aberta ao centro para entrada real do personagem.
+  box(1.45,2.03,.10,3.70,1.39,-.63,palette.glass);
+  box(1.20,2.03,.10,6.92,1.39,-.63,palette.glass);
+  box(.10,2.40,.12,4.45,1.49,-.62,darkFrame);
+  box(.10,2.40,.12,6.27,1.49,-.62,darkFrame);
+  const doorL=box(.73,2.08,.045,4.95,1.39,-.56,palette.glass);
+  const doorR=box(.73,2.08,.045,5.58,1.39,-.56,palette.glass);
+  shopDoors=[{mesh:doorL,x:4.95,dx:-.57},{mesh:doorR,x:5.58,dx:.57}];
+  for(const door of shopDoors){
+    box(.035,1.89,.052,door.x+.21,1.39,-.52,palette.metal);
+  }
+  box(4.93,.27,4.02,5.27,3.25,-2.49,palette.trim);
+  box(4.97,.11,4.07,5.27,3.45,-2.49,palette.lime);
+  box(4.73,.54,.16,5.27,2.75,-.53,palette.green);
+  planeLabel('CONVENIÊNCIA',3.66,.39,5.27,2.77,-.426,'#ffffff',null,78);
+  box(4.62,.15,.40,5.27,3.00,-.53,palette.led);
+  // Revestimento de piso em quadrados, com prateleira central livre para circulação lateral.
+  const grout=color('#aebbb6');
+  for(let i=0;i<5;i++){
+    box(.024,.018,3.45,3.19+i*.99,.43,-2.51,grout);
+  }
+  for(let z=-4.20;z<-.70;z+=.75)box(4.30,.018,.027,5.28,.43,z,grout);
+  // Refrigeradores no fundo da loja com portas transparentes e iluminação interna.
+  for(const x of [3.61,4.47,5.33]){
+    box(.78,2.0,.55,x,1.48,-4.03,palette.white);
+    box(.66,1.68,.034,x,1.45,-3.734,palette.darkGlass);
+    box(.62,1.60,.032,x,1.46,-3.701,palette.glass);
+    box(.08,1.35,.05,x+.25,1.45,-3.674,palette.metal);
+    for(const y of [1.05,1.55,2.05])for(const dx of [-.18,0,.18]){
+      cylinder(.075,.075,.25,x+dx,y,-3.66,color(y>1.7?'#4c78b0':'#cd3c3b'),8);
     }
   }
-  // Maquininha estilizada sobre o balcão de conveniência.
-  box(.25,.35,.20,6.85,.87,.62,color('#263c39'));
-  box(.20,.18,.025,6.85,.99,.74,color('#b4e7ae'));
-  box(.16,.06,.03,6.85,.81,.74,color('#5b8274'));
-  planeLabel('PIX',.18,.09,6.85,1.01,.758,'#245239',null,50);
-  // Ilha de bebidas na entrada: três embalagens maiores em destaque.
-  for(const [x,c,name] of [[3.85,'#cf352d','COCA'],[5.15,'#496dba','RED BULL'],[6.5,'#72b3e5','ÁGUA']]){
-    const material=color(c);
-    cylinder(.25,.25,.8,x,.65,1.05,material,14);
-    cylinder(.255,.255,.045,x,1.07,1.05,palette.white,14);
-    planeLabel(name,.48,.18,x,.72,1.31,'#ffffff',null,65);
+  // Ilha de prateleiras na lateral esquerda, sem bloquear o acesso ao caixa.
+  for(const y of [.72,1.36,1.97]){
+    box(1.36,.08,.53,3.75,y,-2.30,palette.white);
+    for(const x of [3.25,3.57,3.89,4.21]){
+      const c=x<3.75?color('#c63235'):color('#426d9e');
+      cylinder(.10,.10,.32,x,y+.19,-2.25,c,9);
+      cylinder(.108,.108,.024,x,y+.36,-2.25,palette.metal,9);
+    }
   }
+  box(.13,1.56,.11,3.10,1.22,-2.30,darkFrame);
+  box(.13,1.56,.11,4.39,1.22,-2.30,darkFrame);
+  // Parede de lanches e expositores com três embalagens ampliadas.
+  for(const [x,c,name] of [[3.45,'#cf352d','COCA'],[4.42,'#456bae','RED BULL'],[5.30,'#74b3e5','ÁGUA']]){
+    cylinder(.20,.20,.69,x,.74,-1.43,color(c),12);
+    cylinder(.20,.20,.036,x,1.10,-1.43,palette.white,12);
+    planeLabel(name,.37,.12,x,.79,-1.207,'#ffffff',null,56);
+  }
+  // Balcão do PDV do lado direito, com PC, teclado, impressora e maquininha.
+  box(1.85,.18,.72,6.50,.94,-2.02,palette.white);
+  box(1.85,.82,.70,6.50,.51,-2.02,color('#cbd3c9'));
+  box(.79,.55,.10,6.20,1.35,-2.26,palette.dark);
+  box(.70,.46,.019,6.20,1.37,-2.204,palette.screen);
+  planeLabel('ECO PDV',.58,.13,6.20,1.42,-2.19,'#125637',null,62);
+  planeLabel('CAIXA 01',.52,.10,6.20,1.30,-2.18,'#125637',null,52);
+  box(.10,.22,.08,6.20,1.01,-2.25,palette.metal);
+  box(.50,.04,.18,6.20,1.04,-1.75,palette.dark);
+  for(let i=0;i<5;i++)for(let j=0;j<2;j++)box(.06,.009,.031,6.02+i*.085,1.066,-1.81+j*.065,palette.gray);
+  box(.34,.30,.23,6.97,1.15,-2.34,palette.dark);
+  box(.27,.08,.22,6.97,1.31,-2.34,palette.metal);
+  box(.27,.14,.014,6.97,1.39,-2.207,palette.white);
+  box(.27,.37,.23,6.99,1.31,-1.78,color('#253f3b'));
+  box(.22,.17,.022,6.99,1.42,-1.65,palette.screen);
+  planeLabel('PIX',.18,.07,6.99,1.43,-1.632,'#275c3f',null,48);
+  box(.22,.09,.021,6.99,1.19,-1.65,palette.gray);
+  // Letreiros de seções internas e quadro de ofertas fictícias.
+  planeLabel('BEBIDAS  •  LANCHES',2.28,.27,4.44,2.40,-4.277,'#4a7a55',null,64);
+  planeLabel('PAGAMENTO AQUI',1.48,.20,6.48,2.18,-3.94,'#387453',null,58);
   const shopEnd=world.children.length;
   const shopGroup=new THREE.Group();
+  shopGroup.name='loja-conveniencia-interior';
   for(const mesh of world.children.slice(shopFirst,shopEnd))shopGroup.attach(mesh);
   shopGroup.position.set(-8.1,0,-6.05);
   world.add(shopGroup);
@@ -257,6 +290,33 @@ function buildScene(){
       box(.45,.18,.02,x,.61,z+.33,palette.white);
     }
   }
+  // Oficina detalhada: bancada de ferramentas, elevador, motor e drenagem segura.
+  box(2.15,.14,.78,6.44,.42,-.43,palette.metal);
+  for(const x of [5.60,7.30])for(const z of [-.92,.06]){
+    box(.12,.96,.12,x,.90,z,palette.dark);
+  }
+  box(2.45,.14,1.56,6.44,1.53,-.45,color('#4f7d88'));
+  box(2.09,.20,1.18,6.44,1.68,-.45,color('#cfdbdf'));
+  // Veículo de manutenção sobre o elevador.
+  box(2.64,.42,1.26,6.42,1.99,-.46,color('#b2c4cc'));
+  box(1.22,.45,1.08,6.17,2.37,-.46,palette.darkGlass);
+  for(const dx of [-.88,.85])for(const dz of [-.64,.64]){
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.14,10),palette.wheels);
+    wheel.rotation.x=Math.PI/2;wheel.position.set(6.42+dx,1.78,-.46+dz);world.add(wheel);
+  }
+  // Coletor de óleo usado sob o veículo.
+  cylinder(.39,.41,.37,6.40,.68,-.45,color('#2d5158'),12);
+  cylinder(.42,.42,.06,6.40,.88,-.45,palette.metal,12);
+  box(1.16,1.78,.13,8.29,1.40,-.80,palette.dark);
+  for(const [i,x] of [7.91,8.27,8.63].entries()){
+    const tool=box(.07,.76,.058,x,1.63,-.708,palette.metal);
+    tool.rotation.z=i===1?.24:-.15;
+    box(.26,.10,.06,x,2.05,-.71,palette.gold);
+  }
+  box(1.22,.78,.67,8.13,.73,.96,palette.gray);
+  box(1.12,.08,.70,8.13,1.15,.96,palette.metal);
+  box(.71,.25,.12,8.13,.93,1.33,palette.dark);
+  planeLabel('LUBRIFICANTES',1.06,.16,8.13,1.31,1.35,'#2b694e',null,54);
   // Armário e itens de óleo Shell ao lado do box
   box(1.12,1.45,.68,8.22,1.10,-2.1,palette.white);
   box(1.10,.10,.75,8.22,1.85,-2.1,palette.green);
@@ -301,8 +361,10 @@ function buildScene(){
     for(const dz of [-.46,.46])box(.13,.19,.20,x+1.35,.82,z+dz,palette.gold);
     for(const dz of [-.46,.46])box(.07,.20,.18,x-1.33,.82,z+dz,palette.red);
   }
-  car(-2.8,2.80,color('#457a9c'));
-  car(-6.85,1.7,color('#dad6c9'));
+  // Veículos estacionados fora das vagas usadas pelos clientes animados.
+  car(9.60,4.50,color('#457a9c'));
+  car(-9.40,4.60,color('#dad6c9'));
+
   // Faixas refletivas sobre o piso e pequenas balizas na lateral.
   for(const x of [3.45,9.25])for(const z of [-2.75,1.45]){
     cylinder(.065,.075,.74,x,.66,z,palette.gold,8);
@@ -318,19 +380,20 @@ function buildScene(){
     }
   }
   tree(-10.4,2.6,.8);tree(-9.0,-10.5,.8);tree(10.25,-5,.85);tree(10.45,3.3,.7);
+  district=createDistrict({world,scene,lowPower:lowPower()});
   // Bordas da praça / canteiros
   for(const x of [-8.3,8.2]){
     box(.7,.24,1.6,x,.26,1.85,color('#eff2da'));
     for(let i=0;i<3;i++)cylinder(.21,.24,.45,x,.53,1.3+i*.46,color('#74af80'),6);
   }
   anchors=[
-    {label:'Bombas · 6 combustíveis',category:'combustiveis',position:new THREE.Vector3(-3.2,4.68,.15)},
+    {label:'3 ilhas · 6 combustíveis',category:'combustiveis',position:new THREE.Vector3(-2.40,4.68,-1.4)},
     {label:'Conveniência atrás do posto',category:'conveniencia',position:new THREE.Vector3(-2.82,4.15,-8.1)},
     {label:'Troca de óleo lateral',category:'cuidados',position:new THREE.Vector3(6.5,4.12,.4)},
-    {label:'Coca-Cola',productId:'coca',image:'https://santaluzia.vtexassets.com/arquivos/ids/997380/556297.jpg?v=638525861586730000',position:new THREE.Vector3(-4.20,2.1,-5.08)},
-    {label:'Red Bull',productId:'redbull',image:'https://carrefourbr.vtexassets.com/arquivos/ids/183189711/image-0.jpg?v=638740381539970000',position:new THREE.Vector3(-2.70,2.1,-5.08)},
+    {label:'Coca-Cola',productId:'coca',image:'https://santaluzia.vtexassets.com/arquivos/ids/997380/556297.jpg?v=638525861586730000',position:new THREE.Vector3(-4.65,1.9,-7.42)},
+    {label:'Red Bull',productId:'redbull',image:'https://carrefourbr.vtexassets.com/arquivos/ids/183189711/image-0.jpg?v=638740381539970000',position:new THREE.Vector3(-3.63,1.9,-7.42)},
     {label:'Shell Helix',productId:'oleo',image:'https://images.tcdn.com.br/img/img_prod/945233/shell_helix_hx8_sp_gf6_5w_30_305337_1_d60fb75deefdebba672b1596906b76c6.jpg',position:new THREE.Vector3(7.6,2.6,-1.2)},
-    {label:'Caixa com computador',action:'payment',position:new THREE.Vector3(-1.70,2.35,-5.5)},
+    {label:'Caixa com computador',action:'payment',position:new THREE.Vector3(-1.65,2.12,-8.0)},
     {label:'Maquininha na pista',action:'payment',position:new THREE.Vector3(2.74,2.5,1.86)}
   ];
   for(const anchor of anchors){
@@ -455,12 +518,34 @@ try{
     scene.fog.color.set(night?'#1b3449':'#d9e7df');
     for(const lamp of lamps)lamp.intensity=night?13:.35;
     stage.classList.toggle('night-mode',!!night);
+    district?.setNight(!!night);
     queueDraw();
+  }
+  // Animação ambiente com limite de FPS, pausada quando o painel não está visível.
+  let doorOpening=0,doorTarget=0;
+  function animateAmbient(time){
+    ambientId=requestAnimationFrame(animateAmbient);
+    if(document.hidden||!ambientVisible)return;
+    if(ambientLast&&time-ambientLast<(lowPower()?58:35))return;
+    const delta=ambientLast?Math.min(.08,(time-ambientLast)/1000):.035;
+    ambientLast=time;
+    district?.update(time,delta);
+    const next=doorOpening+(doorTarget-doorOpening)*Math.min(1,delta*6);
+    if(Math.abs(next-doorOpening)>.0001){doorOpening=next;
+      for(const door of shopDoors)door.mesh.position.x=door.x+door.dx*doorOpening;
+    }
+    queueDraw();
+  }
+  function setShopOpen(value){doorTarget=value?1:0;}
+  requestAnimationFrame(animateAmbient);
+  if(typeof IntersectionObserver==='function'){
+    const obs=new IntersectionObserver(entries=>{ambientVisible=!!entries[0]?.isIntersecting;ambientLast=0;},{threshold:.03});
+    obs.observe(stage);
   }
   setQuality('auto');
   window.ecoScene={
     focus,
-    requestRender:queueDraw,setQuality,
+    requestRender:queueDraw,setQuality,setShopOpen,
     getContext:()=>({THREE,scene,world,renderer,overviewCamera:camera,controls,stage,anchors,cameraObstacles,requestRender:queueDraw}),
     setActiveCamera:(next)=>{activeCamera=next||null;controls.enabled=!activeCamera;queueDraw();},
     setNight

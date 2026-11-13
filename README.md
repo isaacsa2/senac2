@@ -120,3 +120,13 @@ O layout funciona com CSS responsivo para telas de smartphone, tablet, notebook 
 - **Qualidade:** escolha Automático, Mais detalhes ou Econômico. O modo automático reduz custo gráfico em dispositivos com tela pequena ou poucos núcleos; preserva compatibilidade com PC/notebook e celular.
 
 O desenho 3D permanece uma representação estilizada do posto, **não uma réplica exata de uma unidade real**. Fotos de produtos e Three.js são recursos externos sujeitos à disponibilidade da conexão.
+
+
+## Simulação V5 — posto brasileiro e bairro animado
+O posto tem 3 bombas físicas com 6 bicos: bomba flex (comum, aditivada e etanol), diesel (S10 e S500) e premium (Racing), com seleção de bico no modo frentista. As seis opções continuam cadastradas individualmente no PDV.
+
+A conveniência tem interior acessível com porta de correr, piso, refrigeradores, prateleiras e PC de caixa com maquininha. A troca de óleo inclui elevador, veículo em manutenção, bancada e coletor de óleo. O bairro recebeu ruas, edifícios, árvores, ponto de ônibus, nuvens, veículos e pedestres animados. Há redução de FPS nas animações para poupar energia e pausa fora da tela.
+
+No modo frentista, o carro chega, apresenta pedido por litros, valor em reais ou tanque completo; o jogador escolhe o bico, abastece, conclui pagamento e libera o veículo para sair. O caixa na loja usa uma interface de treinamento original inspirada em PDVs brasileiros, sem cópia de produtos comerciais.
+
+O terminal fictício inclui cartão por inserção ou aproximação, sucesso/erros aleatórios ou forçados (instrutor), Pix demonstrativo e dinheiro usando as cédulas e moedas brasileiras. Nota a prazo salva conta a receber local com vencimento, limite didático por cliente e baixa fictícia. A moeda de 1 centavo foi incluída como denominação legal, ainda que rara na prática. Consulte Banco Central: https://www.bcb.gov.br/cedulasemoedas/moedasemitidas . Tudo é simulado e não é pagamento nem documento fiscal.
