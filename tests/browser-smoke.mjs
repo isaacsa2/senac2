@@ -17,6 +17,7 @@ try{
   await page.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded',timeout:20000});
   await page.waitForFunction(()=>Boolean(window.ecoScene&&window.ecoGame&&window.ECO_OPERATIONS),{timeout:45000});
   console.log('Scene initialized');
+  await page.screenshot({path:'ecoposto-desktop.png',fullPage:true});
   assert.equal(await page.locator('#products-grid .product-card').count(),45);
   // CPU-based WebGL em CI precisa da qualidade econômica para manter resposta.
   await page.locator('#graphics-quality').selectOption('economico');
@@ -64,6 +65,30 @@ try{
   await page.waitForFunction(()=>document.querySelector('#receipt-dialog')?.open);
   assert.match(await page.locator('#receipt-content').innerText(),/SIMULAÇÃO/);
   console.log('Cash transaction and receipt working');
+  assert.deepEqual(errors,[],'Uncaught browser JavaScript errors');
+  // Viewport móvel: detectar vazamentos laterais e interfaces fora da tela.
+  const mobile=await browser.newPage({viewport:{width:390,height:844},
+    deviceScaleFactor:1,isMobile:true,hasTouch:true});
+  mobile.on('pageerror',error=>errors.push(String(error)));
+  await mobile.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded',timeout:20000});
+  await mobile.waitForFunction(()=>Boolean(window.ecoScene&&window.ECO_OPERATIONS),{timeout:45000});
+  await mobile.locator('#graphics-quality').selectOption('economico');
+  const sizes=await mobile.evaluate(()=>({
+    viewport:document.documentElement.clientWidth,document:document.documentElement.scrollWidth,
+    scene:document.querySelector('#scene-stage').getBoundingClientRect().width,
+    toolbar:document.querySelector('.scene-toolbar').getBoundingClientRect().width
+  }));
+  console.log('Mobile layout:',JSON.stringify(sizes));
+  assert.ok(sizes.document<=sizes.viewport+2,'horizontal overflow on 390px viewport');
+  await mobile.screenshot({path:'ecoposto-mobile.png',fullPage:true});
+  await mobile.locator('#open-operations-toolbar').click();
+  assert.equal(await mobile.locator('#operations-dialog').evaluate(el=>el.open),true);
+  const dlg=await mobile.locator('.operations-shell').evaluate(el=>({
+    width:el.getBoundingClientRect().width,scroll:el.scrollWidth
+  }));
+  assert.ok(dlg.scroll<=dlg.width+2,'management dialog horizontal overflow on mobile');
+  await mobile.locator('#close-operations').click();
+  await mobile.close();
   assert.deepEqual(errors,[],'Uncaught browser JavaScript errors');
   console.log('Browser smoke: all checks passed');
 }catch(err){

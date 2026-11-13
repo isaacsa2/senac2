@@ -30,6 +30,15 @@ jobs:
           python3 -m http.server 8765 --directory public >/tmp/eco-http.log 2>&1 &
           sleep 2
           node tests/browser-smoke.mjs
+      - name: Salvar capturas visuais desktop e mobile
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ecoposto-visual-qa
+          path: |
+            ecoposto-desktop.png
+            ecoposto-mobile.png
+          if-no-files-found: ignore
       - name: Publicar screenshot em caso de falha
         if: failure()
         uses: actions/upload-artifact@v4

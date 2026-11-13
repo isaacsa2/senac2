@@ -326,10 +326,6 @@
       $('#payment-error').textContent=retailCheck.error;return;
     }
     let creditRecord=null;
-    if(method==='prazo'){
-      try{creditRecord=sim.saveCredit(getCreditDetails());}
-      catch(error){$('#payment-error').textContent=error.message;return;}
-    }
     const amountReceived=$('#cash-received').value===''?NaN:Math.round(Number($('#cash-received').value)*100);
     const cash=sim?.cashAdjustment(total())||{original:total(),due:total(),discount:0};
     if(method==='dinheiro'){
@@ -338,6 +334,12 @@
       }
     }else if(method!=='prazo'&&!paymentApproved){
       $('#payment-error').textContent='Confirme o pagamento fictício na maquininha antes de finalizar.';return;
+    }
+    // Registra o título a prazo somente depois de validar o caixa e o estoque.
+    // Impede duplicidade quando o usuário tenta finalizar uma venda inválida.
+    if(method==='prazo'){
+      try{creditRecord=sim.saveCredit(getCreditDetails());}
+      catch(error){$('#payment-error').textContent=error.message;return;}
     }
     const now=new Date(),rows=cart.map(e=>({product:productOf(e.id),qty:e.qty}));
     const payNames={pix:'Pix na maquininha (simulado)',cartao:'Cartão '+($('#card-type').value==='credito'?'crédito':'débito')+' (simulado)',dinheiro:'Dinheiro em espécie (simulado)',prazo:'Nota a prazo (conta a receber fictícia)'};
