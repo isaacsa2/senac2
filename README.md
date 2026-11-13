@@ -109,3 +109,14 @@ O catálogo possui **45 produtos e serviços didáticos**: novos óleos Shell He
 
 ## Dispositivos
 O layout funciona com CSS responsivo para telas de smartphone, tablet, notebook e desktop; movimentação por toque ou teclado. Renderização 3D depende de WebGL. Imagens externas de produtos têm fallback.
+
+
+## Visual e câmera V4
+- **Posto mais detalhado:** chão com texturas procedurais leves, pavimentação, demarcação de vagas, passarela de pedestres, ralos, meio-fios, frisos, painéis luminosos, iluminação dia/noite, sombras suaves nos aparelhos que suportam, displays nas bombas e dois veículos.
+- **PC no caixa:** monitor de PDV, teclado, impressora e maquininha, construídos no próprio Three.js.
+- **Maquininha na pista:** terminal instalado junto ao pátio; aproxime-se com o frentista e pressione **E** ou clique na marcação em vista 3D para abrir o processo de pagamento fictício, desde que haja produtos no carrinho.
+- **Câmera:** vista orbitável na visita; em modo frentista, arraste mouse/toque para girar a câmera, role a roda para aproximar/afastar, pressione **V** para alternar entre 1ª e 3ª pessoa. WASD e setas acompanham a orientação da câmera.
+- **Tela cheia:** botão na barra do cenário (ou tecla **F** fora dos campos de texto), com Fullscreen API quando disponível e alternativa CSS em navegadores sem a API. A cena, HUD e controles permanecem visíveis.
+- **Qualidade:** escolha Automático, Mais detalhes ou Econômico. O modo automático reduz custo gráfico em dispositivos com tela pequena ou poucos núcleos; preserva compatibilidade com PC/notebook e celular.
+
+O desenho 3D permanece uma representação estilizada do posto, **não uma réplica exata de uma unidade real**. Fotos de produtos e Three.js são recursos externos sujeitos à disponibilidade da conexão.

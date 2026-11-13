@@ -315,6 +315,56 @@
     catalog:products.filter(p=>p.category!=='combustiveis').map(p=>({id:p.id,name:p.name,brand:p.brand,category:p.category,price:p.price,summary:p.summary,image:pictures[p.id]||null})),
     money
   };
+  // Integração dos terminais de pagamento 3D ao mesmo fluxo seguro do PDV.
+  // Sem produtos, openPayment mostra orientação em vez de abrir uma cobrança vazia.
+  window.addEventListener('ecoposto:open-payment',openPayment);
+  const graphics=$('#graphics-quality');
+  function updateQuality(){window.ecoScene?.setQuality?.(graphics.value);}
+  graphics.addEventListener('change',updateQuality);
+  window.addEventListener('ecoposto:scene-ready',updateQuality);
+  if(window.ecoScene)updateQuality();
+
+  // Tela cheia nativa da cena (inclui HUD e barra de ferramentas).
+  // Se o navegador não expuser Fullscreen API, usa fallback CSS reversível.
+  const sceneCard=$('.scene-card'),fullBtn=$('#fullscreen-scene');
+  let fallbackFullscreen=false;
+  function fullscreenNow(){return document.fullscreenElement===sceneCard||fallbackFullscreen;}
+  function updateFullscreen(){
+    const active=fullscreenNow();
+    fullBtn.textContent=active?'⤢ Sair da tela cheia':'⛶ Tela cheia';
+    fullBtn.setAttribute('aria-pressed',String(active));
+    fullBtn.setAttribute('aria-label',active?'Sair do modo tela cheia':'Abrir posto em tela cheia');
+    document.body.classList.toggle('scene-fullscreen-open',active);
+    window.dispatchEvent(new Event('resize'));
+    window.ecoScene?.requestRender?.();
+  }
+  async function toggleFullscreen(){
+    if(document.fullscreenElement===sceneCard){
+      try{await document.exitFullscreen();}catch(error){console.warn('Não foi possível sair da tela cheia.',error);}
+      return;
+    }
+    if(fallbackFullscreen){
+      fallbackFullscreen=false;sceneCard.classList.remove('fullscreen-fallback');updateFullscreen();return;
+    }
+    try{
+      if(typeof sceneCard.requestFullscreen==='function'){
+        await sceneCard.requestFullscreen();
+        updateFullscreen();return;
+      }
+    }catch(error){console.info('Tela cheia nativa indisponível; usando layout alternativo.',error);}
+    fallbackFullscreen=true;sceneCard.classList.add('fullscreen-fallback');updateFullscreen();
+  }
+  fullBtn.addEventListener('click',toggleFullscreen);
+  document.addEventListener('fullscreenchange',updateFullscreen);
+  document.addEventListener('keydown',event=>{
+    if(event.target instanceof HTMLElement&&event.target.closest('input,textarea,select,[contenteditable]'))return;
+    if(event.key.toLowerCase()==='f'&&!document.querySelector('dialog[open]')){
+      event.preventDefault();toggleFullscreen();
+    }
+    if(event.key==='Escape'&&fallbackFullscreen){
+      fallbackFullscreen=false;sceneCard.classList.remove('fullscreen-fallback');updateFullscreen();
+    }
+  });
   window.addEventListener('ecoposto:zone',event=>chooseZone(event.detail.category));
   $('#catalog-count').textContent=String(products.length);
   renderProducts();renderCart();

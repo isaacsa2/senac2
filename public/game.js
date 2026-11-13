@@ -24,6 +24,8 @@ function initialise(){
   started=true;
   const ctx=window.ecoScene.getContext();
   const {scene,world,stage}=ctx;
+  const cameraRig={yaw:.56,pitch:.56,distance:7.4,firstPerson:false,dragging:false,pointerId:null,lastX:0,lastY:0};
+  const cameraRay=new THREE.Raycaster();
   const player=new THREE.Group();
   const shirt=new THREE.MeshStandardMaterial({color:'#f0cd55',roughness:.72});
   const pants=new THREE.MeshStandardMaterial({color:'#243f51',roughness:.82});
@@ -45,7 +47,7 @@ function initialise(){
   player.position.set(-2.4,.29,2.4);
   world.add(player);
   player.visible=false;
-  const cam=new THREE.PerspectiveCamera(54,1,.12,95);
+  const cam=new THREE.PerspectiveCamera(58,1,.12,95);
   const states={active:false, keys:new Set(), near:null, runs:0, liters:0, afterSound:false, audio:null};
   const dialog=$('fuel-dialog');
   const controls=$('game-touch-pad');
@@ -150,6 +152,19 @@ function initialise(){
     night=!night;window.ecoScene.setNight(night);
     nightButton.textContent=night?'☀ Dia':'☾ Noite';
   });
+  const cameraButton=document.createElement('button');
+  cameraButton.type='button';cameraButton.className='game-exit';
+  cameraButton.textContent='◉ Câmera 3ª pessoa';
+  cameraButton.setAttribute('aria-label','Alternar entre câmera de terceira e primeira pessoa');
+  $('game-hud').querySelector('.game-hud-top').insertBefore(cameraButton,$('exit-game'));
+  function toggleCamera(){
+    cameraRig.firstPerson=!cameraRig.firstPerson;
+    cameraRig.pitch=cameraRig.firstPerson?.07:.56;
+    player.visible=!cameraRig.firstPerson;
+    cameraButton.textContent=cameraRig.firstPerson?'◉ Câmera 1ª pessoa':'◉ Câmera 3ª pessoa';
+    updateCamera(.5);ctx.requestRender();
+  }
+  cameraButton.addEventListener('click',toggleCamera);
   const soundButton=document.createElement('button');
   soundButton.className='game-exit';soundButton.type='button';soundButton.textContent='Som: desligado';
   $('game-hud').querySelector('.game-hud-top').insertBefore(soundButton,$('exit-game'));
@@ -163,6 +178,15 @@ function initialise(){
     for(const pump of pumpList){
       const d=Math.hypot(player.position.x-pump.x,player.position.z-pump.z);
       if(d<2.15&&d<dMin){best={kind:'pump',pump,label:'Abastecer: '+pump.name};dMin=d;}
+    }
+    // Terminais de pagamento reais na maquete: maquininha de pista e PC do caixa.
+    const laneTerminal=Math.hypot(player.position.x-2.74,player.position.z-1.86);
+    if(laneTerminal<1.48&&laneTerminal<dMin){
+      best={kind:'payment',label:'Usar maquininha de pista · E'};dMin=laneTerminal;
+    }
+    const cashierPC=Math.hypot(player.position.x+1.5,player.position.z+5.45);
+    if(cashierPC<1.16&&cashierPC<dMin){
+      best={kind:'payment',label:'Usar computador do caixa · E'};dMin=cashierPC;
     }
     const shopDist=Math.hypot(player.position.x+2.85,player.position.z+5.9);
     if(shopDist<2.75&&shopDist<dMin){best={kind:'shop',label:'Entrar na conveniência'};dMin=shopDist;}
@@ -181,6 +205,7 @@ function initialise(){
     if(x<-10.2||x>10.5||z<-12.3||z>6.3)return true;
     // A loja tem vitrine, portanto não é atravessável. Interação ocorre na entrada.
     if(x>-5.5&&x<-.15&&z<-6.38&&z>-10.7)return true;
+    if(Math.abs(x-2.74)<.34&&Math.abs(z-1.86)<.30)return true;
     // Bombas físicas e pilares da estrutura.
     for(const pump of pumpList)if(Math.abs(x-pump.x)<.53&&Math.abs(z-pump.z)<.48)return true;
     return false;
@@ -194,18 +219,44 @@ function initialise(){
     if(states.keys.has('d')||states.keys.has('arrowright')||states.keys.has('right'))axis.x+=1;
     const length=Math.hypot(axis.x,axis.z);if(!length)return false;
     const speed=(states.keys.has('shift')?5.1:3.6);
-    const dx=(axis.x/length)*speed*delta,dz=(axis.z/length)*speed*delta;
+    const localX=axis.x/length,localZ=axis.z/length;
+    // Movimento relativo à orientação da câmera, como em jogos em terceira pessoa.
+    const dx=(localX*Math.cos(cameraRig.yaw)+localZ*Math.sin(cameraRig.yaw))*speed*delta;
+    const dz=(-localX*Math.sin(cameraRig.yaw)+localZ*Math.cos(cameraRig.yaw))*speed*delta;
     const nx=player.position.x+dx,nz=player.position.z+dz;
     if(!isBlocked(nx,player.position.z))player.position.x=nx;
     if(!isBlocked(player.position.x,nz))player.position.z=nz;
-    player.rotation.y=Math.atan2(-axis.x,-axis.z);
+    player.rotation.y=Math.atan2(-dx,-dz);
     player.position.y=.29+Math.sin(performance.now()/135)*.018;
     return true;
   }
   function updateCamera(delta){
-    const view=new THREE.Vector3(player.position.x+3.75,player.position.y+6.4,player.position.z+6.7);
-    cam.position.lerp(view,Math.min(1,delta*12));
-    cam.lookAt(player.position.x,1.05,player.position.z-.45);
+    const yaw=cameraRig.yaw,pitch=cameraRig.pitch;
+    const target=new THREE.Vector3(player.position.x,player.position.y+1.05,player.position.z);
+    if(cameraRig.firstPerson){
+      const eye=new THREE.Vector3(player.position.x,player.position.y+1.53,player.position.z);
+      const forward=new THREE.Vector3(-Math.sin(yaw)*Math.cos(pitch),Math.sin(pitch),-Math.cos(yaw)*Math.cos(pitch));
+      const changed=cam.position.distanceToSquared(eye)>.000001;
+      cam.position.copy(eye);cam.lookAt(eye.clone().add(forward));
+      return changed;
+    }
+    const horizontal=cameraRig.distance*Math.cos(pitch);
+    const desired=target.clone().add(new THREE.Vector3(Math.sin(yaw)*horizontal,cameraRig.distance*Math.sin(pitch),Math.cos(yaw)*horizontal));
+    // Evita que a câmera entre no volume da loja ao se aproximar do caixa.
+    if(ctx.cameraObstacles?.length){
+      const direction=desired.clone().sub(target),length=direction.length();
+      cameraRay.set(target,direction.normalize());
+      cameraRay.far=length;
+      for(const obstacle of ctx.cameraObstacles)obstacle.updateWorldMatrix(true,false);
+      const hits=cameraRay.intersectObjects(ctx.cameraObstacles,false);
+      if(hits.length&&hits[0].distance<length){
+        desired.copy(target).addScaledVector(direction,Math.max(1.2,hits[0].distance-.32));
+      }
+    }
+    const old=cam.position.distanceToSquared(desired);
+    cam.position.lerp(desired,1-Math.exp(-Math.min(.2,delta)*8));
+    cam.lookAt(target);
+    return old>.00002;
   }
   function tick(now){
     if(!states.active)return;
@@ -213,9 +264,10 @@ function initialise(){
     lastFrame=now;
     if(!document.hidden){
       const moved=move(dt);
-      if(moved){updateCamera(dt);ctx.stage.classList.add('game-moving');ctx.requestRender();}
-      else if(!cam.userData.followed){updateCamera(dt);ctx.requestRender();}
-      cam.userData.followed=true;
+      const cameraMoving=updateCamera(dt);
+      if(moved||cameraMoving)ctx.requestRender();
+      if(moved){ctx.stage.classList.add('game-moving');}
+      else ctx.stage.classList.remove('game-moving');
       if(moved||!states.near){updateHud();updateMini();}
     }
     animId=requestAnimationFrame(tick);
@@ -228,8 +280,11 @@ function initialise(){
     $('game-interact').disabled=true;
     cam.aspect=Math.max(1,stage.clientWidth)/Math.max(1,stage.clientHeight);
     cam.updateProjectionMatrix();
-    cam.position.copy(player.position).add(new THREE.Vector3(3.75,6.4,6.7));
-    cam.lookAt(player.position.x,1.05,player.position.z-.45);
+    cam.position.copy(player.position).add(new THREE.Vector3(3.75,5.5,6.3));
+    cam.lookAt(player.position.x,1.05,player.position.z);
+    cameraRig.firstPerson=false;player.visible=true;
+    cameraRig.pitch=.56;cameraRig.distance=7.4;
+    cameraButton.textContent='◉ Câmera 3ª pessoa';
     ctx.controls.enabled=false;
     window.ecoScene.setActiveCamera(cam);
     lastFrame=0;
@@ -239,7 +294,7 @@ function initialise(){
   }
   function stop(){
     if(!states.active)return;
-    states.active=false;states.keys.clear();
+    states.active=false;states.keys.clear();cameraRig.dragging=false;cameraRig.pointerId=null;
     cancelAnimationFrame(animId);animId=null;
     player.visible=false;
     stage.classList.remove('is-gaming','game-moving');
@@ -256,11 +311,46 @@ function initialise(){
     if(!states.active)return;
     const here=nearest();if(!here)return;
     if(here.kind==='pump')openFuel(here.pump);
+    else if(here.kind==='payment')window.dispatchEvent(new Event('ecoposto:open-payment'));
     else renderShop(here.kind);
   }
   $('start-game').addEventListener('click',start);
   $('exit-game').addEventListener('click',stop);
   $('game-interact').addEventListener('click',interact);
+  // Mouse/toque gira a câmera sem alterar a movimentação; roda ajusta distância.
+  const canvas=ctx.renderer.domElement;
+  canvas.addEventListener('pointerdown',event=>{
+    if(!states.active||document.querySelector('dialog[open]')||(event.pointerType==='mouse'&&event.button!==0))return;
+    cameraRig.dragging=true;cameraRig.pointerId=event.pointerId;
+    cameraRig.lastX=event.clientX;cameraRig.lastY=event.clientY;
+    try{canvas.setPointerCapture(event.pointerId);}catch{}
+  });
+  canvas.addEventListener('pointermove',event=>{
+    if(!states.active||!cameraRig.dragging||cameraRig.pointerId!==event.pointerId)return;
+    const dx=event.clientX-cameraRig.lastX,dy=event.clientY-cameraRig.lastY;
+    cameraRig.lastX=event.clientX;cameraRig.lastY=event.clientY;
+    cameraRig.yaw-=dx*.006;
+    const minPitch=cameraRig.firstPerson?-.65:.18;
+    const maxPitch=cameraRig.firstPerson?.75:1.20;
+    cameraRig.pitch=Math.max(minPitch,Math.min(maxPitch,cameraRig.pitch+dy*.004));
+    event.preventDefault();
+    ctx.requestRender();
+  });
+  function releasePointer(event){
+    if(event.pointerId===cameraRig.pointerId){
+      cameraRig.dragging=false;cameraRig.pointerId=null;
+    }
+  }
+  canvas.addEventListener('pointerup',releasePointer);
+  canvas.addEventListener('pointercancel',releasePointer);
+  canvas.addEventListener('lostpointercapture',releasePointer);
+  canvas.addEventListener('wheel',event=>{
+    if(!states.active||cameraRig.firstPerson)return;
+    event.preventDefault();
+    cameraRig.distance=Math.max(3.4,Math.min(10.5,cameraRig.distance+Math.sign(event.deltaY)*.55));
+    ctx.requestRender();
+  },{passive:false});
+  // Tecla V alterna entre 1ª e 3ª pessoa durante o jogo.
   const keyMap={w:'w',a:'a',s:'s',d:'d',arrowup:'arrowup',arrowdown:'arrowdown',arrowleft:'arrowleft',arrowright:'arrowright',shift:'shift'};
   document.addEventListener('keydown',event=>{
     if(!states.active||event.repeat&&event.key.toLowerCase()==='e')return;
@@ -269,7 +359,8 @@ function initialise(){
     const key=event.key.toLowerCase();
     if(keyMap[key]){event.preventDefault();states.keys.add(key);}
     if(key==='e'){event.preventDefault();interact();}
-    if(key==='escape')stop();
+    if(key==='v'){event.preventDefault();toggleCamera();}
+    if(key==='escape'&&!document.fullscreenElement&&!stage.closest('.scene-card')?.classList.contains('fullscreen-fallback'))stop();
   });
   document.addEventListener('keyup',event=>states.keys.delete(event.key.toLowerCase()));
   window.addEventListener('blur',()=>states.keys.clear());

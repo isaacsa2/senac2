@@ -396,3 +396,41 @@ h1,h2,h3,p{margin-top:0}
 
 .fake-qr[hidden]{display:none!important}
 .game-shop-checkout{margin-top:14px}
+
+
+/* 3D World v4: tela cheia verdadeira ou fallback, responsive para notebook/tablet/mobile. */
+.scene-stage{background:radial-gradient(ellipse at 55% 30%,#eff7f4 0%,#daebec 62%,#c7dcd7 100%)}
+.scene-stage.night-mode{background:radial-gradient(ellipse at 40% 30%,#416078 0%,#182d42 70%,#0f202e 100%)}
+.scene-tools{display:flex;align-items:center;gap:9px;justify-content:flex-end;flex-wrap:wrap}
+.graphics-label{display:flex;align-items:center;gap:7px;color:#496b56;font-size:11px;font-weight:800}
+.graphics-label select{appearance:auto;min-height:38px;border-radius:10px;border:1px solid #bfd6c6;background:#f5faf3;color:#315c43;padding:6px 8px;font:700 11px 'DM Sans',sans-serif}
+.fullscreen-button{display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:39px;background:#193f34;color:#eaf9eb;border:0;border-radius:11px;padding:8px 13px;font-weight:900;font-size:12px;white-space:nowrap}
+.fullscreen-button:hover,.fullscreen-button:focus-visible{background:#306b4d;outline-offset:2px}
+.scene-card:fullscreen,.scene-card.fullscreen-fallback{
+  background:#102a28;display:flex;flex-direction:column;width:100%;height:100dvh;min-height:0;border:0;border-radius:0;overflow:hidden;
+}
+.scene-card.fullscreen-fallback{position:fixed;inset:0;z-index:1100}
+.scene-card:fullscreen .scene-topbar,.scene-card.fullscreen-fallback .scene-topbar{flex:0 0 46px;height:46px;background:#183b30;color:#cceada;border-color:#345545}
+.scene-card:fullscreen .scene-topbar-right,.scene-card.fullscreen-fallback .scene-topbar-right{color:#d3e9d7}
+.scene-card:fullscreen .scene-stage,.scene-card.fullscreen-fallback .scene-stage{flex:1 1 0;height:auto!important;min-height:0}
+.scene-card:fullscreen .scene-toolbar,.scene-card.fullscreen-fallback .scene-toolbar{flex:0 0 auto;padding:10px 16px}
+body.scene-fullscreen-open{overflow:hidden}
+.scene-card:fullscreen .scene-canvas canvas,.scene-card.fullscreen-fallback .scene-canvas canvas{width:100%!important;height:100%!important}
+.scene-card:fullscreen .scene-marker,.scene-card.fullscreen-fallback .scene-marker{font-size:12px}
+@media(max-width:850px){.scene-toolbar{align-items:flex-start;flex-direction:column}.scene-tools{width:100%;justify-content:space-between}.camera-buttons{gap:5px}.camera-btn{font-size:11px;padding:10px 12px}}
+@media(max-width:520px){.scene-tools{gap:5px}.scene-tools .toolbar-link{font-size:10px}.graphics-label{font-size:10px}.graphics-label select{max-width:120px;font-size:10px}.fullscreen-button{font-size:11px;padding:8px 10px}.scene-card:fullscreen .scene-toolbar,.scene-card.fullscreen-fallback .scene-toolbar{padding:8px;gap:6px}.scene-card:fullscreen .scene-topbar,.scene-card.fullscreen-fallback .scene-topbar{padding:0 12px}.scene-card:fullscreen .scene-topbar-right,.scene-card.fullscreen-fallback .scene-topbar-right{display:none}}
+@media(orientation:landscape) and (max-height:500px){
+  .scene-card:fullscreen .scene-topbar,.scene-card.fullscreen-fallback .scene-topbar{display:none}
+  .scene-card:fullscreen .scene-toolbar,.scene-card.fullscreen-fallback .scene-toolbar{padding:5px 10px}
+}
+@media(prefers-reduced-motion:reduce){.scene-card:fullscreen *, .scene-card.fullscreen-fallback *{scroll-behavior:auto}}
+
+
+/* Camera HUD: consistência visual em desktop e touch */
+.scene-card:fullscreen .game-hud,.scene-card.fullscreen-fallback .game-hud{z-index:12}
+.scene-card:fullscreen .game-minimap,.scene-card.fullscreen-fallback .game-minimap{box-shadow:0 15px 35px #0004}
+.scene-stage.is-gaming .scene-canvas canvas{cursor:crosshair}
+@media (hover:none) and (pointer:coarse){
+  .scene-stage.is-gaming .scene-canvas canvas{touch-action:none}
+  .game-touch-pad{z-index:15}
+}

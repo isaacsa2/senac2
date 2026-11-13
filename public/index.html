@@ -55,7 +55,7 @@
           <div class="game-launch" id="game-launch">
             <span class="game-launch-tag">SIMULAÇÃO INTERATIVA · MISSÃO 01</span>
             <button type="button" class="button button-primary" id="start-game">▶ Iniciar modo frentista</button>
-            <small>WASD ou setas · E para interagir · controles na tela do celular</small>
+            <small>WASD/setas · E interagir · mouse arrasta câmera · V muda câmera</small>
           </div>
           <div class="game-hud" id="game-hud" hidden aria-live="polite">
             <div class="game-hud-top"><span class="game-pill">● MODO FRENTISTA</span><span class="game-progress" id="game-progress">Missão: abasteça o primeiro veículo</span>
@@ -64,10 +64,17 @@
             <div class="game-action" id="game-action"><span id="game-action-label">Ande até uma bomba para abastecer</span><button type="button" id="game-interact" disabled>Interagir · E</button></div>
             <div class="game-touch-pad" id="game-touch-pad" aria-label="Movimentação"><button data-move="forward" type="button" aria-label="Andar para frente">▲</button><div><button data-move="left" type="button" aria-label="Andar para esquerda">◀</button><button data-move="back" type="button" aria-label="Andar para trás">▼</button><button data-move="right" type="button" aria-label="Andar para direita">▶</button></div></div>
           </div>
-          <span class="scene-helper"><span class="mouse-doodle">↔</span> ARRASTE PARA GIRAR · SCROLL PARA ZOOM</span>
+          <span class="scene-helper"><span class="mouse-doodle">↔</span> ARRASTE PARA GIRAR · ZOOM COM RODA OU PINÇA</span>
           <span class="scene-corner">VISTA <b>01 — 03</b></span>
         </div>
-        <div class="scene-toolbar"><div class="camera-buttons" role="group" aria-label="Ângulo da câmera"><button class="camera-btn is-active" data-view="geral" type="button">Vista geral</button><button class="camera-btn" data-view="bombas" type="button">Bombas</button><button class="camera-btn" data-view="loja" type="button">Loja</button><button class="camera-btn" data-view="servicos" type="button">Serviços</button></div><button class="toolbar-link" id="reset-camera" type="button">↺ Reiniciar câmera</button></div>
+        <div class="scene-toolbar">
+          <div class="camera-buttons" role="group" aria-label="Ângulo da câmera"><button class="camera-btn is-active" data-view="geral" type="button">Vista geral</button><button class="camera-btn" data-view="bombas" type="button">Bombas</button><button class="camera-btn" data-view="loja" type="button">Loja</button><button class="camera-btn" data-view="servicos" type="button">Troca de óleo</button></div>
+          <div class="scene-tools">
+            <label class="graphics-label" for="graphics-quality">Gráficos <select id="graphics-quality" aria-label="Qualidade gráfica"><option value="auto">Automático</option><option value="alto">Mais detalhes</option><option value="economico">Econômico</option></select></label>
+            <button class="toolbar-link" id="reset-camera" type="button" title="Voltar para a vista geral">↺ Reiniciar</button>
+            <button class="fullscreen-button" id="fullscreen-scene" type="button" aria-pressed="false" aria-label="Abrir posto em tela cheia">⛶ Tela cheia</button>
+          </div>
+        </div>
       </div>
       <div class="zone-cards" aria-label="Áreas do posto">
         <button class="zone-card" type="button" data-zone="combustiveis"><span class="zone-icon zone-green"><svg><use href="#i-pump"></use></svg></span><span><strong>Bombas de combustível</strong><small>6 combustíveis para conhecer</small></span><span class="zone-arrow">↗</span></button>

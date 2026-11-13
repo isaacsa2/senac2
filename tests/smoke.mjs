@@ -69,3 +69,38 @@ test('expanded catalog has real-brand entries and mock prices',()=>{
   assert.equal(new Set(extra.map(x=>x.id)).size,extra.length);
   for(const p of extra)assert.ok(Number.isInteger(p.price)&&p.price>=0);
 });
+
+
+test('immersive version: fullscreen, camera, quality and checkout stations',()=>{
+  const scene=read('public/scene.js');
+  const game=read('public/game.js');
+  const app=read('public/app.js');
+  const css=read('public/styles.css');
+  const idMatches=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
+  for(const id of ['fullscreen-scene','graphics-quality','reset-camera','start-game','scene-stage','scene-canvas']){
+    assert.ok(idMatches.includes(id),'Missing '+id);
+  }
+  assert.match(app,/requestFullscreen/);
+  assert.match(app,/fullscreenchange/);
+  assert.match(app,/fullscreen-fallback/);
+  assert.match(app,/ecoposto:open-payment/);
+  assert.match(scene,/function setQuality/);
+  assert.match(scene,/function setNight/);
+  assert.match(scene,/cameraObstacles/);
+  assert.match(scene,/PointLight/);
+  assert.match(scene,/PC de caixa completo/);
+  assert.match(scene,/Terminal autônomo na pista/);
+  assert.match(game,/function toggleCamera/);
+  assert.match(game,/cameraRig.firstPerson/);
+  assert.match(game,/pointermove/);
+  assert.match(game,/ecoCatalog/);
+  assert.match(game,/new Event\('ecoposto:open-payment'\)/);
+  assert.match(css,/scene-card:fullscreen/);
+  assert.match(css,/scene-fullscreen-open/);
+});
+
+test('new scene modules keep their JavaScript syntax valid',()=>{
+  for(const path of ['public/scene.js','public/game.js','public/app.js']){
+    assert.doesNotThrow(()=>new Script(read(path).replace(/^import\s+.*?;\s*$/gm,''),{filename:path}));
+  }
+});
