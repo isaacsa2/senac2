@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#edf4ee">
+  <meta name="description" content="EcoPosto 3D: explore um posto de combustíveis em 3D, descubra produtos reais e pratique um caixa de treinamento sem pagamentos de verdade.">
+  <title>EcoPosto 3D — Explore, aprenda e simule</title>
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./styles.css">
+  <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"}}</script>
+  <script src="./app.js" defer></script>
+  <script type="module" src="./scene.js"></script>
+</head>
+<body>
+  <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true">
+    <symbol id="i-pump" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16M2 21h17M7 7h7v6H7zM17 9h2l2 2v7a2 2 0 0 1-4 0v-2M8 17h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="i-bag" viewBox="0 0 24 24"><path d="M4 8h16l-1 13H5L4 8zm4 1V6a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2c-4 5-7.5 9-7.5 13a7.5 7.5 0 0 0 15 0C19.5 11 16 7 12 2z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 17a4 4 0 0 1-1-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-tool" viewBox="0 0 24 24"><path d="M13.5 5a6 6 0 0 0 6.9 7.6L12 16l-4 4a2.8 2.8 0 0 1-4-4l4-4 8.4-8.4A6 6 0 0 0 13.5 5z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="1" fill="currentColor"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.5 15.5 5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 11v5m0-8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 24 24"><path d="M5 5 19 19M19 5 5 19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  </svg>
+  <header class="site-header">
+    <div class="shell nav-wrap">
+      <a href="#inicio" class="logo" aria-label="EcoPosto, voltar ao início"><span class="logo-icon"><svg><use href="#i-pump"></use></svg></span><span><strong>eco<span>posto</span></strong><small>LAB INTERATIVO</small></span></a>
+      <nav class="nav-links" aria-label="Navegação principal"><a href="#explorar">Explorar 3D</a><a href="#produtos">Produtos</a><a href="#como-funciona">Como funciona</a></nav>
+      <button class="button button-dark cart-trigger" type="button" data-open-cart aria-label="Abrir caixa de treinamento"><svg><use href="#i-bag"></use></svg><span>Meu PDV</span><span class="cart-count" id="cart-count">0</span></button>
+    </div>
+  </header>
+  <main id="inicio">
+    <section class="hero shell" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="pulse-dot"></span> UMA EXPERIÊNCIA PARA APRENDER NA PRÁTICA</div>
+        <h1 id="hero-title">Seu posto.<br>Seu aprendizado.<br><em>Outra dimensão.</em></h1>
+        <p>Explore um posto em 3D, descubra o que cada combustível e produto faz e pratique um atendimento no caixa — tudo no mesmo lugar.</p>
+        <div class="hero-actions"><a class="button button-primary" href="#explorar">Explorar o posto <svg><use href="#i-arrow"></use></svg></a><a href="#produtos" class="button button-outline">Ver produtos</a></div>
+        <div class="hero-stats"><div><strong>3D</strong><span>interativo</span></div><div><strong>14</strong><span>itens no catálogo</span></div><div><strong>100%</strong><span>simulado</span></div></div>
+      </div>
+      <div class="hero-aside" aria-hidden="true"><div class="hero-circle circle-a"></div><div class="hero-circle circle-b"></div><div class="hero-sticker"><span class="sticker-star">✳</span><span>Aprender<br>fazendo!</span></div><div class="hero-number">03<span>áreas para explorar</span></div><div class="hero-line line-a"></div><div class="hero-line line-b"></div></div>
+    </section>
+    <section id="explorar" class="scene-section shell" aria-labelledby="scene-title">
+      <div class="section-heading scene-heading"><div><span class="section-kicker">01 / EXPLORE</span><h2 id="scene-title">Um posto inteiro em <span>3D.</span></h2><p>Arraste para girar, use o zoom e toque nas marcações para descobrir cada área.</p></div><span class="scene-tag"><span class="live-dot"></span> CENA INTERATIVA</span></div>
+      <div class="scene-card">
+        <div class="scene-topbar"><span><span class="scene-topbar-mark"></span>ECOPOSTO <b>WORLD</b></span><span class="scene-topbar-right">MODELO 3D · DEMONSTRAÇÃO</span></div>
+        <div class="scene-stage" id="scene-stage" aria-label="Modelo tridimensional de um posto com bombas de combustível, loja de conveniência e serviços">
+          <div id="scene-canvas" class="scene-canvas"></div>
+          <div class="scene-fallback" id="scene-fallback"><div class="fallback-roof"><b>eco<span>posto</span></b></div><div class="fallback-pumps"><span>GASOLINA</span><span>ETANOL</span><span>DIESEL</span></div><div class="fallback-ground"></div><p>Visualização 3D requer WebGL e acesso ao módulo gráfico.</p></div>
+          <div class="scene-marker-layer" id="scene-markers"></div>
+          <span class="scene-helper"><span class="mouse-doodle">↔</span> ARRASTE PARA GIRAR</span>
+          <span class="scene-corner">VISTA <b>01 — 03</b></span>
+        </div>
+        <div class="scene-toolbar"><div class="camera-buttons" role="group" aria-label="Ângulo da câmera"><button class="camera-btn is-active" data-view="geral" type="button">Vista geral</button><button class="camera-btn" data-view="bombas" type="button">Bombas</button><button class="camera-btn" data-view="loja" type="button">Loja</button><button class="camera-btn" data-view="servicos" type="button">Serviços</button></div><button class="toolbar-link" id="reset-camera" type="button">↺ Reiniciar câmera</button></div>
+      </div>
+      <div class="zone-cards" aria-label="Áreas do posto">
+        <button class="zone-card" type="button" data-zone="combustiveis"><span class="zone-icon zone-green"><svg><use href="#i-pump"></use></svg></span><span><strong>Bombas de combustível</strong><small>Gasolina, etanol e diesel</small></span><span class="zone-arrow">↗</span></button>
+        <button class="zone-card" type="button" data-zone="conveniencia"><span class="zone-icon zone-yellow"><svg><use href="#i-bag"></use></svg></span><span><strong>Loja de conveniência</strong><small>Bebidas e itens para viagem</small></span><span class="zone-arrow">↗</span></button>
+        <button class="zone-card" type="button" data-zone="cuidados"><span class="zone-icon zone-blue"><svg><use href="#i-tool"></use></svg></span><span><strong>Cuidados e serviços</strong><small>Óleo, ARLA 32 e manutenção</small></span><span class="zone-arrow">↗</span></button>
+      </div>
+    </section>
+    <section id="produtos" class="products-section" aria-labelledby="products-title"><div class="shell">
+      <div class="section-heading"><div><span class="section-kicker">02 / DESCUBRA</span><h2 id="products-title">Cada produto tem <span>uma função.</span></h2><p>Produtos existentes no mercado e informações educativas. Selecione um item para entender como funciona.</p></div><div class="catalog-note"><svg><use href="#i-info"></use></svg> Preços fictícios para treinamento</div></div>
+      <div class="catalog-controls"><div id="category-chips" class="filter-chips" role="group" aria-label="Filtrar produtos"></div><label class="search-field"><svg><use href="#i-search"></use></svg><input id="product-search" type="search" placeholder="Buscar produto..." aria-label="Buscar produto" autocomplete="off"></label></div>
+      <div class="products-counter" id="products-counter" aria-live="polite"></div><div id="products-grid" class="products-grid"></div>
+      <p class="products-footnote">Os nomes de marcas e produtos são usados apenas para identificação e aprendizado. O EcoPosto não é afiliado a essas empresas. Preços, disponibilidade e operações são demonstrativos.</p>
+    </div></section>
+    <section id="como-funciona" class="learning-section shell" aria-labelledby="learn-title">
+      <div class="learning-intro"><span class="section-kicker">03 / PRATIQUE</span><h2 id="learn-title">Do abastecimento ao <span>caixa.</span></h2><p>Um laboratório de aprendizagem que simula a rotina de um posto, sem movimentar dinheiro real ou emitir documento fiscal.</p><button class="button button-primary" data-open-cart type="button">Abrir simulador de PDV <svg><use href="#i-arrow"></use></svg></button></div>
+      <div class="learning-steps"><article><span>01</span><div><h3>Explore as áreas</h3><p>Gire o modelo e clique nas bombas, loja ou área de serviços.</p></div></article><article><span>02</span><div><h3>Conheça os produtos</h3><p>Entenda a aplicação, a forma de venda e os cuidados de uso.</p></div></article><article><span>03</span><div><h3>Simule uma compra</h3><p>Adicione itens ao carrinho, defina os litros e escolha a forma de pagamento fictícia.</p></div></article><article><span>04</span><div><h3>Emita um comprovante</h3><p>Finalize o exercício e imprima um recibo claramente marcado como simulação.</p></div></article></div>
+    </section>
+    <section class="bottom-cta"><div class="shell bottom-inner"><div><span class="section-kicker">PRONTO PARA COMEÇAR?</span><h2>Aprender fica melhor quando<br><em>você coloca a mão na massa.</em></h2></div><a class="button button-light" href="#explorar">Voltar para o 3D <svg><use href="#i-arrow"></use></svg></a></div></section>
+  </main>
+  <footer class="site-footer"><div class="shell footer-inner"><div class="footer-logo">eco<span>posto</span><small> / laboratório de aprendizagem</small></div><p>Projeto educacional independente · Simulação, sem transações reais</p><a href="https://github.com/isaacsa2/senac2" target="_blank" rel="noopener noreferrer">Código no GitHub ↗</a></div></footer>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
+  <aside class="cart-drawer" id="cart-drawer" role="dialog" aria-modal="true" aria-label="Simulador de PDV" aria-hidden="true" tabindex="-1"><div class="drawer-header"><div><span class="section-kicker">CAIXA DE TREINAMENTO</span><h2>Meu PDV <span class="drawer-badge">DEMO</span></h2></div><button id="close-cart" class="icon-button" type="button" aria-label="Fechar caixa"><svg><use href="#i-x"></use></svg></button></div><div class="drawer-hint"><svg><use href="#i-info"></use></svg> Este é um exercício. Não existe cobrança ou pagamento real.</div><div class="cart-items" id="cart-items"></div><div class="cart-bottom"><div class="cart-total-line"><span>Total do pedido</span><strong id="cart-total">R$ 0,00</strong></div><button id="checkout-btn" class="button button-primary button-full" type="button">Ir para pagamento simulado <svg><use href="#i-arrow"></use></svg></button><button id="clear-cart" class="button-text" type="button">Limpar pedido</button></div></aside>
+  <dialog id="detail-dialog" class="modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><div id="detail-content"></div></div></dialog>
+  <dialog id="payment-dialog" class="modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><span class="section-kicker">FINALIZAR · SIMULAÇÃO</span><h2>Forma de pagamento</h2><p class="muted">Escolha uma opção fictícia. Nenhum dado financeiro será coletado.</p><div id="payment-summary" class="payment-summary"></div><fieldset class="payment-options"><legend>Como o cliente pagaria?</legend><label><input type="radio" name="payment" value="pix" checked><span>PIX (simulado)</span></label><label><input type="radio" name="payment" value="cartao"><span>Cartão (simulado)</span></label><label><input type="radio" name="payment" value="dinheiro"><span>Dinheiro (simulado)</span></label></fieldset><div id="cash-group" class="cash-group" hidden><label for="cash-received">Valor recebido (R$)</label><input type="number" min="0" step="0.01" id="cash-received" placeholder="Ex.: 100,00"><small id="cash-change" aria-live="polite"></small></div><p id="payment-error" class="form-error" role="alert"></p><button id="finish-sale" type="button" class="button button-primary button-full">Concluir venda de treinamento <svg><use href="#i-check"></use></svg></button></div></dialog>
+  <dialog id="receipt-dialog" class="modal receipt-modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><div id="receipt-content"></div><button id="print-receipt" class="button button-dark button-full" type="button">Imprimir comprovante</button></div></dialog>
+</body>
+</html>

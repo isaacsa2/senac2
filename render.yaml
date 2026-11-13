@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: ecoposto-3d
+    runtime: static
+    repo: https://github.com/isaacsa2/senac2
+    branch: main
+    buildCommand: echo "EcoPosto 3D pronto para publicação"
+    staticPublishPath: ./public
+    autoDeployTrigger: commit
+    headers:
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
