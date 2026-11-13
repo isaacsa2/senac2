@@ -45,14 +45,30 @@ O código 3D usa Three.js 0.181.2, importado de uma CDN com versão fixa. O HTML
 - public/assets/favicon.svg — ícone vetorial
 - render.yaml — infraestrutura declarativa do Render
 
+## Combustíveis incluídos (conforme exercício)
+
+O simulador apresenta **seis combustíveis** e seis bombas na cena 3D:
+
+1. Gasolina Comum
+2. Gasolina Aditivada Shell V-Power Nitro+ (denominação histórica)
+3. Shell V-Power Racing (gasolina premium)
+4. Etanol Comum
+5. Diesel S10
+6. Diesel S500
+
+**Nota sobre a nomenclatura:** a Shell atualmente promove a linha **Shell V-Power**, enquanto Nitro+ aparece em sua documentação histórica. O nome solicitado é mantido na simulação para fins didáticos. A Shell V-Power Racing é combustível de alta octanagem, distinta da gasolina aditivada convencional.
+
+**Preços fictícios.** Os valores no simulador não são cotações, nem refletem um posto específico. A venda, os pagamentos, os comprovantes e os serviços são exclusivamente simulados.
+
 ## Conteúdo e créditos
 
-Produtos como Original Gasolina, linha Ipimax e Ipiranga F1 Master são marcas reais usadas **sem afiliação ou patrocínio**. Os itens aparecem como referências educativas, sem logotipos oficiais. Exemplos de conveniência e serviços completam a simulação; consulte sempre rótulos, manuais e documentação técnica antes de uso.
+Combustíveis Shell, lubrificante Shell Helix HX8 SP e produtos de conveniência são marcas e produtos reais referenciados **sem afiliação ou patrocínio**. Não foram empregados logotipos oficiais. Consulte o manual do veículo e as fichas técnicas de cada combustível ou produto antes de uso.
 
-Fontes de referência:
-- [Combustíveis e linha Ipimax — Ipiranga](https://www.ipiranga.com.br/wps/portal/pt-br/ipiranga/produtos/combustiveis/nossos-produtos/)
-- [Lubrificantes Ipiranga](https://www.ipiranga.com.br/wps/portal/pt-br/ipiranga/blog-ipiranga/categorias/lubrificantes/o-que-e-viscosidade-do-oleo)
-- [Manual técnico de Diesel — Petrobras](https://petrobras.com.br)
-- Sites oficiais das marcas citadas no catálogo
+Fontes oficiais de referência:
+- [Shell — dúvidas sobre combustíveis e menção histórica ao Nitro+](https://www.shell.com.br/motoristas/combustiveis/duvidas-sobre-combustiveis.html)
+- [Shell V-Power](https://www.shell.com.br/motoristas/combustiveis/shell-v-power.html)
+- [Shell V-Power Racing](https://www.shell.com.br/motoristas/combustiveis/shell-v-power-racing.html)
+- [Shell — diesel S10 e S500](https://www.shell.com.br/motoristas/combustiveis/shell-v-power-diesel.html)
+- [Shell Helix HX8 SP 5W-30](https://raizenlubrificantes.shell.com.br/para-revendas-e-consumidores/linha-de-produto/shell-helix/produto/shell-helix-hx8-sp)
 
-O arquivo LICENSE do repositório estabelece AGPL-3.0. O projeto é uma criação original, não uma cópia do simulador em Canva.
+O arquivo LICENSE do repositório estabelece AGPL-3.0. O projeto é uma criação original, não uma cópia do simulador do Canva.

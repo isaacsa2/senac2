@@ -63,7 +63,7 @@ function buildScene(){
   box(11.1,.19,.18,canopyX,3.78,1.43,palette.gold);
   box(10.8,.14,.14,canopyX,3.55,1.44,palette.white);
   planeLabel('ECOPOSTO',5.2,.67,-3.9,3.93,1.59,'#ffffff',null,105);
-  planeLabel('LAB  ·  COMBUSTÍVEIS',3,.35,.0,3.97,1.61,'#e7f5de',null,54);
+  planeLabel('SHELL  ·  TREINAMENTO',3,.35,.0,3.97,1.61,'#e7f5de',null,54);
   for(const x of [-7.35,1.75])for(const z of [-3.7,.85]){
     box(.34,3.65,.34,x,1.95,z,palette.white);
     box(.48,.15,.48,x,.3,z,palette.gray);
@@ -97,9 +97,14 @@ function buildScene(){
     world.add(new THREE.Mesh(new THREE.TubeGeometry(path,16,.035,5,false),palette.wheels));
     cylinder(.055,.055,.15,x+.54,.71,z+.3,palette.dark);
   }
-  dispenser(-6.15,-.95,color('#4eab78'),'GAS');
-  dispenser(-3.05,-.95,color('#dfb65e'),'ETANOL');
-  dispenser(.05,-.95,color('#649ac9'),'DIESEL');
+  // Seis bombas: correspondem exatamente aos seis combustíveis usados no catálogo.
+  // Duas fileiras de três, mantendo a contagem de objetos baixa para aparelhos modestos.
+  dispenser(-6.15,-2.95,color('#5eaa7d'),'COMUM');
+  dispenser(-3.05,-2.95,color('#c65c56'),'NITRO+');
+  dispenser(.05,-2.95,color('#b94143'),'RACING');
+  dispenser(-6.15,-.40,color('#d8b359'),'ETANOL');
+  dispenser(-3.05,-.40,color('#518bb7'),'S10');
+  dispenser(.05,-.40,color('#6d879a'),'S500');
   // Loja de conveniência
   ellipseShadow(5.27,-2.47,2.8,2.25,.095);
   box(4.6,2.85,3.65,5.27,1.66,-2.50,palette.white);
