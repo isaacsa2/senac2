@@ -51,7 +51,7 @@ test('payment simulator covers Pix terminal, card and physical cash',()=>{
   assert.match(app,/function makeFakeQr\(/);
   assert.match(app,/function confirmTerminal\(/);
   assert.match(app,/paymentApproved/);
-  assert.match(app,/data-cash-bill/);
+  assert.match(app,/data-cash-centavos/);
   assert.match(css,/\.fake-qr\[hidden\]/);
   assert.match(css,/@media\(max-width:680px\)/);
 });
@@ -90,7 +90,7 @@ test('immersive version: fullscreen, camera, quality and checkout stations',()=>
   assert.match(scene,/function setNight/);
   assert.match(scene,/cameraObstacles/);
   assert.match(scene,/PointLight/);
-  assert.match(scene,/PC de caixa completo/);
+  assert.match(scene,/Balcão do PDV do lado direito/);
   assert.match(scene,/Terminal autônomo na pista/);
   assert.match(game,/function toggleCamera/);
   assert.match(game,/cameraRig.firstPerson/);
@@ -153,9 +153,9 @@ test('new modules compile and existing checkout workflow survives',()=>{
  for(const path of ['public/world-extra.js','public/sim-core.js']){
    assert.doesNotThrow(()=>new Script(read(path).replace(/^import\s+.*?;\s*$/gm,'').replace(/^export\s+/gm,''),{filename:path}));
  }
- assert.match(app,/sim\.machineOutcome\(\)/);
+ assert.match(app,/sim\?\.machineOutcome\(\)/);
  assert.match(app,/sim\.saveCredit\(/);
- assert.match(app,/sim\.changeFor\(/);
+ assert.match(app,/sim\?\.changeFor\(difference\)/);
  assert.match(app,/function openPosComputer\(/);
  assert.match(app,/ecoposto:sale-complete/);
 });
