@@ -261,9 +261,9 @@ test('more vehicles, configurable traffic and upgraded city map',()=>{
  assert.match(scene,/setTrafficDensity:/);
  assert.match(scene,/bairro:\{position:/);
  assert.match(app,/function updateDensity\(\)/);
- assert.match(world,/maxTraffic=lowPower\?7:13/);
- assert.match(world,/intenso:17/);
- assert.match(world,/const variants=\['car','car','hatch','suv','pickup','van','bus'\]/);
+ assert.match(world,/maxTraffic=lowPower\?8:15/);
+ assert.match(world,/intenso:19/);
+ assert.match(world,/const variants=\['car','car','hatch','hatch','suv','pickup','van','bus','motorcycle'\]/);
  assert.match(world,/function setTrafficDensity/);
  assert.match(world,/trafficLightPhase\(sec\)/);
  assert.match(world,/function updateSignals/);
