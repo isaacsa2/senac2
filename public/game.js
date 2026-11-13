@@ -51,7 +51,8 @@ function initialise(){
   for(const dx of [-.29,.29])primitive(new THREE.BoxGeometry(.13,.56,.16),shirt,dx,1.06,0);
   primitive(new THREE.BoxGeometry(.48,.06,.40),pants,0,1.83,-.03);
   primitive(new THREE.BoxGeometry(.43,.13,.14),pants,0,1.78,-.25);
-  player.position.set(-2.4,.29,2.4);
+  // Ponto inicial fora da vaga dos carros que chegam para abastecer.
+  player.position.set(3.6,.29,3.7);
   world.add(player);
   player.visible=false;
   const cam=new THREE.PerspectiveCamera(58,1,.12,95);
