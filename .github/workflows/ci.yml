@@ -14,7 +14,7 @@ jobs:
       - name: Testes de integridade e regras de operação
         run: node --test tests/smoke.mjs
   browser:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 9
     steps:
       - uses: actions/checkout@v4
