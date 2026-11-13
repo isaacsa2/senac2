@@ -16,11 +16,11 @@ const palette = {
   wheels:color('#273634'), blue:color('#477ca9'), red:color('#d65a51')
 };
 function makeLabel(text, foreground='#fff', background=null, fontSize=66) {
-  const canvas=document.createElement('canvas'); canvas.width=1024;canvas.height=256;
+  const canvas=document.createElement('canvas'); canvas.width=512;canvas.height=128;
   const ctx=canvas.getContext('2d');
-  if(background){ctx.fillStyle=background;ctx.fillRect(0,0,1024,256);}
-  ctx.font='800 '+fontSize+'px Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle=foreground;ctx.fillText(text,512,130,950);
+  if(background){ctx.fillStyle=background;ctx.fillRect(0,0,512,128);}
+  ctx.font='800 '+Math.round(fontSize*.5)+'px Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle=foreground;ctx.fillText(text,256,65,475);
   const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
   texture.anisotropy=2;
   return new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide,depthWrite:false});
