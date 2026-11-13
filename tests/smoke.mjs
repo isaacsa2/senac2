@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {Script} from 'node:vm';
+import {Script,runInNewContext} from 'node:vm';
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 const html=read('public/index.html');
 const app=read('public/app.js');
@@ -38,4 +38,34 @@ test('product images remain optional and details are reachable',()=>{
  assert.match(scene,/scene-product/);
  assert.match(scene,/CONVENIÊNCIA/);
  assert.match(scene,/TROCA DE ÓLEO/);
+});
+
+
+test('payment simulator covers Pix terminal, card and physical cash',()=>{
+  const css=read('public/styles.css');
+  for(const id of ['payment-dialog','payment-device','card-virtual','fake-qr','terminal-confirm','card-type','cash-group','cash-received','cash-change','finish-sale']){
+    assert.match(html,new RegExp('id="'+id+'"'));
+  }
+  assert.match(app,/function makeFakeQr\(/);
+  assert.match(app,/function confirmTerminal\(/);
+  assert.match(app,/paymentApproved/);
+  assert.match(app,/data-cash-bill/);
+  assert.match(css,/\.fake-qr\[hidden\]/);
+  assert.match(css,/@media\(max-width:680px\)/);
+});
+test('game redraw API and dynamic shop are connected',()=>{
+  assert.match(scene,/getContext:\(\)=>\(\{[^}]*requestRender:queueDraw/);
+  assert.match(game,/ecoCatalog\?\.catalog/);
+  assert.match(game,/game-shop-checkout/);
+  assert.match(game,/game-shop-search-input/);
+});
+test('expanded catalog has real-brand entries and mock prices',()=>{
+  const context={window:{}};
+  runInNewContext(read('public/catalog-extra.js'),context);
+  const extra=context.window.ECO_EXTRAS;
+  assert.equal(extra.length,31);
+  assert.equal(extra.filter(x=>x.category==='cuidados').length,9);
+  assert.equal(extra.filter(x=>x.category==='conveniencia').length,22);
+  assert.equal(new Set(extra.map(x=>x.id)).size,extra.length);
+  for(const p of extra)assert.ok(Number.isInteger(p.price)&&p.price>=0);
 });

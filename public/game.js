@@ -57,24 +57,52 @@ function initialise(){
   shopDialog.className='modal game-shop-dialog';
   shopDialog.setAttribute('aria-label','Produtos do posto');
   document.body.appendChild(shopDialog);
+  function escapeHtml(value){
+    return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
   function renderShop(area){
     const atOil=area==='oleo';
-    const choices=atOil?[
-      {id:'oleo',name:'Shell Helix HX8 SP 5W-30',photo:productPhotos.oleo},
-      {id:'arla',name:'ARLA 32 · galão 20 L',photo:productPhotos.arla},
-      {id:'troca-oleo',name:'Serviço de troca de óleo'}
-    ]:[
-      {id:'coca',name:'Coca-Cola · 350 mL',photo:productPhotos.coca},
-      {id:'redbull',name:'Red Bull · 250 mL',photo:productPhotos.redbull},
-      {id:'agua',name:'Água mineral · 500 mL'}
-    ];
+    const categories=atOil?['cuidados','servicos']:['conveniencia'];
+    const choices=(window.ecoCatalog?.catalog||[]).filter(p=>categories.includes(p.category));
     const title=atOil?'Box de troca de óleo':'Loja de conveniência';
-    // Os ids são constantes internas; os nomes e links são definidos no projeto.
-    shopDialog.innerHTML='<div class="modal-inner"><button class="icon-button game-shop-close" type="button" aria-label="Fechar">✕</button><span class="section-kicker">EXPLORAÇÃO DO POSTO</span><h2>'+title+'</h2><p>Selecione um produto da prateleira para saber sua função ou levá-lo ao PDV de treinamento.</p><div class="game-products">'+choices.map(i=>'<div class="game-product"><div class="game-product-art">'+(i.photo?'<img alt="Embalagem real de '+i.name+'" src="'+i.photo+'" loading="lazy" onerror="this.hidden=true">':'<span>▣</span>')+'</div><strong>'+i.name+'</strong><div><button type="button" data-game-detail="'+i.id+'">Conhecer</button><button type="button" data-game-add="'+i.id+'">+ PDV</button></div></div>').join('')+'</div><small>Imagens ilustrativas de produtos reais; operações e preços fictícios.</small></div>';
+    const photo=choice=>choice.image||productPhotos[choice.id]||null;
+    shopDialog.innerHTML='<div class="modal-inner">'+
+      '<button class="icon-button game-shop-close" type="button" aria-label="Fechar">✕</button>'+
+      '<span class="section-kicker">EXPLORAÇÃO DO POSTO</span><h2>'+title+'</h2>'+
+      '<p>Escolha os produtos e serviços nas prateleiras. Você pode conhecer a função ou registrar uma venda no PDV.</p>'+
+      '<label class="game-shop-search">⌕ <input id="game-shop-search-input" type="search" placeholder="Buscar nesta área..." aria-label="Buscar produtos nesta área" autocomplete="off"></label>'+
+      '<div class="game-products">'+choices.map(item=>{
+         const pic=photo(item);
+         const avatar=escapeHtml(item.name.slice(0,2).toUpperCase());
+         return '<div class="game-product" data-shop-name="'+escapeHtml((item.name+' '+item.brand).toLocaleLowerCase('pt-BR'))+'">'+
+          '<div class="game-product-art">'+(pic?'<img alt="Fotografia ilustrativa de '+escapeHtml(item.name)+'" src="'+escapeHtml(pic)+'" loading="lazy" onerror="this.hidden=true">':'<span aria-hidden="true">'+avatar+'</span>')+'</div>'+
+          '<strong>'+escapeHtml(item.name)+'</strong>'+
+          '<small>'+money(item.price)+' / unidade</small>'+
+          '<div><button type="button" data-game-detail="'+escapeHtml(item.id)+'">Conhecer</button><button type="button" data-game-add="'+escapeHtml(item.id)+'">+ PDV</button></div>'+
+          '</div>';
+       }).join('')+'</div><p class="game-shop-empty" hidden>Nenhum produto encontrado nesta área.</p>'+
+      '<button type="button" class="button button-primary button-full game-shop-checkout" id="game-shop-checkout">Ir ao caixa / maquininha</button>'+
+      '<small>Marcas reais para fins didáticos, preços fictícios. Fotos de terceiros podem não carregar; sem ligação comercial com as marcas.</small></div>';
     shopDialog.showModal();
   }
-  shopDialog.addEventListener('click',event=>{
+  shopDialog.addEventListener('input',event=>{
+    if(event.target.id!=='game-shop-search-input')return;
+    const q=event.target.value.trim().toLocaleLowerCase('pt-BR');
+    let visible=0;
+    for(const card of shopDialog.querySelectorAll('.game-product')){
+      const matches=card.dataset.shopName.includes(q);
+      card.hidden=!matches;
+      if(matches)visible++;
+    }
+    shopDialog.querySelector('.game-shop-empty').hidden=visible>0;
+  });
+    shopDialog.addEventListener('click',event=>{
     if(event.target===shopDialog||event.target.closest('.game-shop-close')){shopDialog.close();return;}
+    if(event.target.closest('#game-shop-checkout')){
+      shopDialog.close();
+      document.querySelector('[data-open-cart]')?.click();
+      return;
+    }
     const detail=event.target.closest('[data-game-detail]');
     const add=event.target.closest('[data-game-add]');
     if(detail){

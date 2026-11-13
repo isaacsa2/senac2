@@ -30,6 +30,7 @@
     {id:'lavagem',name:'Lavagem externa simples',brand:'Serviço demonstrativo',category:'servicos',price:3500,unit:'un',summary:'Limpeza externa do veículo.',how:'Serviço de remoção de sujidades da carroceria com produtos e técnicas adequados para a superfície.',care:'É um serviço fictício do simulador; valor, execução e disponibilidade variam conforme o posto.',source:null},
     {id:'calibragem',name:'Calibragem de pneus',brand:'Serviço demonstrativo',category:'servicos',price:0,unit:'un',summary:'Verificação e ajuste da pressão dos pneus.',how:'Ajusta a pressão dos pneus aos valores recomendados pelo fabricante do veículo nas condições indicadas.',care:'Use a pressão correta indicada no manual ou na etiqueta do veículo, considerando a condição dos pneus.',source:null}
   ];
+  products.push(...(window.ECO_EXTRAS||[]));
   const labels = {todos:'Todos',combustiveis:'Combustíveis',cuidados:'Óleos e cuidados',conveniencia:'Conveniência',servicos:'Serviços'};
   const icons = {combustiveis:'i-pump',cuidados:'i-drop',conveniencia:'i-bag',servicos:'i-tool'};
   const $ = (selector) => document.querySelector(selector);
@@ -98,41 +99,132 @@
     $('#detail-content').innerHTML='<div class="detail-icon"><svg><use href="#'+icons[p.category]+'"></use></svg></div><span class="section-kicker">'+labels[p.category].toUpperCase()+' · '+p.brand+'</span><h2>'+p.name+'</h2><p>'+p.summary+'</p><div class="detail-grid"><h3>Para que serve?</h3><p>'+p.how+'</p><h3>Cuidados importantes</h3><p>'+p.care+'</p></div>'+source+'<button class="button button-primary button-full" type="button" data-add-detail="'+p.id+'">Adicionar ao PDV · '+money(p.price)+'</button>';
     $('#detail-dialog').showModal();
   }
+  // Terminal 100% didático: QR é desenho, cartão é fictício, não existe API de cobrança.
+  let paymentApproved=false,approvalTimer=null;
+  const paymentDialog=$('#payment-dialog');
+  function paymentMethod(){return $('input[name="payment"]:checked')?.value||'pix';}
+  function makeFakeQr(){
+    const host=$('#fake-qr');
+    if(host.childElementCount)return;
+    const frag=document.createDocumentFragment();
+    for(let y=0;y<15;y++)for(let x=0;x<15;x++){
+      const dot=document.createElement('i');
+      const finder=(cx,cy)=>x>=cx&&x<cx+4&&y>=cy&&y<cy+4;
+      const corner=finder(0,0)||finder(11,0)||finder(0,11);
+      const on=corner?((x%4===0||y%4===0)||((x%4===2)&&(y%4===2))):((x*17+y*37+x*y*7)%11<5);
+      if(on)dot.className='filled';
+      frag.append(dot);
+    }
+    host.append(frag);
+  }
+  function setTerminalStatus(text,state=''){
+    $('#terminal-status').textContent=text;
+    $('#terminal-status').className='terminal-status'+(state?' '+state:'');
+  }
+  function allowFinish(enabled){
+    $('#finish-sale').disabled=!enabled;
+  }
+  function updateCash(){
+    if(paymentMethod()!=='dinheiro')return;
+    const input=$('#cash-received'),amount=input.value===''?NaN:Math.round(Number(input.value)*100);
+    const valid=Number.isFinite(amount)&&amount>=0&&amount<=10000000;
+    const difference=valid?amount-total():NaN;
+    const change=$('#cash-change');
+    change.classList.toggle('insufficient',valid&&difference<0);
+    if(!valid){
+      change.textContent='Informe o valor entregue pelo cliente.';
+      allowFinish(false);
+    }else if(difference<0){
+      change.textContent='Ainda faltam '+money(-difference)+'.';
+      allowFinish(false);
+    }else{
+      change.textContent='Troco a entregar ao cliente: '+money(difference);
+      allowFinish(true);
+    }
+    $('#payment-error').textContent='';
+  }
+  function renderPaymentMode(){
+    if(approvalTimer){clearTimeout(approvalTimer);approvalTimer=null;}
+    paymentApproved=false;
+    const method=paymentMethod(),cash=method==='dinheiro';
+    $('#payment-device').hidden=cash;
+    $('#cash-group').hidden=!cash;
+    $('#card-type-group').hidden=method!=='cartao';
+    $('#card-virtual').hidden=method!=='cartao';
+    $('#fake-qr').hidden=method!=='pix';
+    $('#payment-device').classList.toggle('is-card',method==='cartao');
+    $('#payment-device').classList.remove('is-approving');
+    $('#terminal-amount').textContent=money(total());
+    $('#payment-error').textContent='';
+    if(method==='pix'){
+      $('#terminal-screen-title').textContent='PIX · DEMONSTRAÇÃO';
+      $('#terminal-screen-sub').textContent='QR ILUSTRATIVO, NÃO ESCANEÁVEL';
+      $('#terminal-instructions').textContent='O cliente visualiza o QR na maquininha. Clique em simular para confirmar uma transação fictícia.';
+      $('#terminal-confirm').textContent='Simular Pix recebido';
+      setTerminalStatus('AGUARDANDO PIX');
+    }else if(method==='cartao'){
+      $('#terminal-screen-title').textContent='CARTÃO · '+($('#card-type').value==='credito'?'CRÉDITO':'DÉBITO');
+      $('#terminal-screen-sub').textContent='Aproxime o cartão virtual';
+      $('#terminal-instructions').textContent='O cliente aproxima o cartão ilustrativo da maquininha. Nenhuma senha ou dado de cartão será solicitado.';
+      $('#terminal-confirm').textContent='Aproximar cartão virtual';
+      setTerminalStatus('AGUARDANDO CARTÃO');
+    }else{
+      $('#cash-art-value').textContent='R$ 20';
+      updateCash();
+    }
+    $('#terminal-confirm').disabled=false;
+    allowFinish(false);
+    if(cash)updateCash();
+  }
   function openPayment(){
     if(!cart.length){notify('Adicione produtos antes de concluir.');return;}
     closeCart();
-    $('#payment-summary').textContent=money(total());
-    $('#payment-error').textContent='';
     $('input[name="payment"][value="pix"]').checked=true;
-    $('#cash-group').hidden=true;$('#cash-received').value='';$('#cash-change').textContent='';
-    $('#payment-dialog').showModal();
+    $('#payment-summary').textContent=money(total());
+    $('#cash-received').value='';
+    makeFakeQr();renderPaymentMode();
+    paymentDialog.showModal();
   }
-  function paymentMethod(){return $('input[name="payment"]:checked').value;}
-  function updateCash(){
-    const value=$('#cash-received').value;
-    if(!value){$('#cash-change').textContent='';return;}
-    const cents=Math.round(Number(value)*100);
-    const diff=cents-total();
-    $('#cash-change').textContent=Number.isFinite(cents)?(diff>=0?'Troco fictício: '+money(diff):'Faltam '+money(-diff)):'';
+  function confirmTerminal(){
+    if(paymentMethod()==='dinheiro'||paymentApproved||approvalTimer)return;
+    $('#terminal-confirm').disabled=true;
+    $('#payment-device').classList.add('is-approving');
+    $('#terminal-screen-sub').textContent='PROCESSANDO SIMULAÇÃO';
+    setTerminalStatus('PROCESSANDO...', 'processing');
+    approvalTimer=setTimeout(()=>{
+      approvalTimer=null;
+      if(!paymentDialog.open)return;
+      paymentApproved=true;
+      $('#terminal-screen-sub').textContent='PAGAMENTO SIMULADO APROVADO ✓';
+      $('#terminal-confirm').textContent='Simulação aprovada ✓';
+      $('#payment-device').classList.remove('is-approving');
+      setTerminalStatus('APROVADO · DEMONSTRAÇÃO','approved');
+      allowFinish(true);
+    },750);
   }
   function finishSale(){
     if(!cart.length)return;
-    const method=paymentMethod(), received=Math.round(Number($('#cash-received').value)*100);
-    if(method==='dinheiro'&&(!$('#cash-received').value||!Number.isFinite(received)||received<total())){
-      $('#payment-error').textContent='Informe um valor recebido maior ou igual ao total.';return;
+    const method=paymentMethod();
+    const amountReceived=$('#cash-received').value===''?NaN:Math.round(Number($('#cash-received').value)*100);
+    if(method==='dinheiro'){
+      if(!Number.isFinite(amountReceived)||amountReceived<total()||amountReceived>10000000){
+        $('#payment-error').textContent='Confira o valor em dinheiro recebido antes de concluir.';return;
+      }
+    }else if(!paymentApproved){
+      $('#payment-error').textContent='Confirme o pagamento fictício na maquininha antes de finalizar.';return;
     }
-    $('#payment-error').textContent='';
-    const now=new Date(), rows=cart.map(e=>({product:productOf(e.id),qty:e.qty}));
-    const payNames={pix:'PIX simulado',cartao:'Cartão simulado',dinheiro:'Dinheiro simulado'};
+    const now=new Date(),rows=cart.map(e=>({product:productOf(e.id),qty:e.qty}));
+    const payNames={pix:'Pix na maquininha (simulado)',cartao:'Cartão '+($('#card-type').value==='credito'?'crédito':'débito')+' (simulado)',dinheiro:'Dinheiro em espécie (simulado)'};
     const ref=String(now.getTime()).slice(-8);
-    const summary=rows.map(e=>'<div class="row-receipt"><span>'+e.product.name+'<br>'+qtyText(e.product,e.qty)+' × '+money(e.product.price)+'</span><span>'+money(e.qty*e.product.price)+'</span></div>').join('<br>');
-    $('#receipt-content').innerHTML='<div class="receipt-print"><h2>ECOPOSTO 3D</h2><div style="text-align:center">Laboratório de PDV · Exemplo didático</div><div class="warning">SIMULAÇÃO — SEM VALOR FISCAL</div><div>Operação #'+ref+'</div><div>'+new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'medium'}).format(now)+'</div><hr>'+summary+'<hr><div class="row-receipt total-receipt"><span>TOTAL</span><span>'+money(total())+'</span></div><div>Pagamento: '+payNames[method]+'</div>'+(method==='dinheiro'?'<div>Recebido: '+money(received)+'</div><div>Troco: '+money(received-total())+'</div>':'')+'<hr><div style="text-align:center">Treinamento exclusivamente educativo.<br>Não comprova compra, pagamento ou abastecimento.</div></div>';
-    $('#payment-dialog').close();
+    const summary=rows.map(e=>'<div class="row-receipt"><span>'+e.product.name+'<br>'+qtyText(e.product,e.qty)+' × '+money(e.product.price)+'</span><span>'+money(Math.round(e.qty*e.product.price))+'</span></div>').join('<br>');
+    $('#receipt-content').innerHTML='<div class="receipt-print"><h2>ECOPOSTO 3D</h2><div style="text-align:center">Laboratório de PDV · Exemplo didático</div><div class="warning">SIMULAÇÃO — SEM VALOR FISCAL</div><div>Operação #'+ref+'</div><div>'+new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'medium'}).format(now)+'</div><hr>'+summary+'<hr><div class="row-receipt total-receipt"><span>TOTAL</span><span>'+money(total())+'</span></div><div>Pagamento: '+payNames[method]+'</div>'+(method==='dinheiro'?'<div>Recebido: '+money(amountReceived)+'</div><div>Troco entregue: '+money(amountReceived-total())+'</div>':'<div>Terminal: ECO PAY · modo de treinamento</div>')+'<hr><div style="text-align:center">Treinamento exclusivamente educativo.<br>Não comprova compra, pagamento ou abastecimento.</div></div>';
+    paymentDialog.close();
+    if(approvalTimer)clearTimeout(approvalTimer);approvalTimer=null;paymentApproved=false;
     cart=[];persist();renderCart();
     $('#receipt-dialog').showModal();
     notify('Venda fictícia concluída!');
   }
-  function chooseZone(id,shouldScroll=true){
+    function chooseZone(id,shouldScroll=true){
     if(!labels[id])return;
     filter=id;query='';$('#product-search').value='';renderProducts();
     if(shouldScroll)$('#produtos').scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
@@ -161,8 +253,32 @@
   $('#clear-cart').addEventListener('click',()=>{cart=[];persist();renderCart();notify('Pedido limpo.');});
   $('#product-search').addEventListener('input',event=>{query=event.target.value.trim().toLocaleLowerCase('pt-BR');renderProducts();});
   $('#reset-camera').addEventListener('click',()=>{document.querySelector('[data-view="geral"]').click();});
-  document.querySelectorAll('input[name="payment"]').forEach(r=>r.addEventListener('change',()=>{$('#cash-group').hidden=paymentMethod()!=='dinheiro';$('#payment-error').textContent='';}));
+  document.querySelectorAll('input[name="payment"]').forEach(r=>r.addEventListener('change',renderPaymentMode));
+  $('#card-type').addEventListener('change',renderPaymentMode);
   $('#cash-received').addEventListener('input',updateCash);
+  $('#cash-reset').addEventListener('click',()=>{
+    $('#cash-received').value='';
+    $('#cash-art-value').textContent='R$ 20';
+    updateCash();
+  });
+  document.querySelectorAll('[data-cash-bill]').forEach(button=>button.addEventListener('click',()=>{
+    if(paymentMethod()!=='dinheiro')return;
+    const add=Number(button.dataset.cashBill);
+    if(!Number.isInteger(add)||add<1||add>200)return;
+    const current=Number($('#cash-received').value||0);
+    if(!Number.isFinite(current)||current+add>100000)return;
+    $('#cash-received').value=(current+add).toFixed(2);
+    $('#cash-art-value').textContent='R$ '+add;
+    $('#cash-group').classList.remove('is-receiving');
+    void $('#cash-group').offsetWidth; // reinicia a pequena animação da cédula
+    $('#cash-group').classList.add('is-receiving');
+    updateCash();
+  }));
+  $('#terminal-confirm').addEventListener('click',confirmTerminal);
+  paymentDialog.addEventListener('close',()=>{
+    if(approvalTimer){clearTimeout(approvalTimer);approvalTimer=null;}
+    paymentApproved=false;
+  });
   $('#cart-items').addEventListener('change',event=>{
     const id=event.target.dataset.qty;
     if(!id)return;
@@ -194,7 +310,12 @@
   document.addEventListener('error',event=>{
     if(event.target instanceof HTMLImageElement&&event.target.matches('.real-product-image'))event.target.hidden=true;
   },true);
-  window.ecoCatalog={fuelProducts:products.filter(p=>p.category==='combustiveis').map(p=>({id:p.id,name:p.name,price:p.price})),money};
+  window.ecoCatalog={
+    fuelProducts:products.filter(p=>p.category==='combustiveis').map(p=>({id:p.id,name:p.name,price:p.price})),
+    catalog:products.filter(p=>p.category!=='combustiveis').map(p=>({id:p.id,name:p.name,brand:p.brand,category:p.category,price:p.price,summary:p.summary,image:pictures[p.id]||null})),
+    money
+  };
   window.addEventListener('ecoposto:zone',event=>chooseZone(event.detail.category));
+  $('#catalog-count').textContent=String(products.length);
   renderProducts();renderCart();
 })();

@@ -97,3 +97,15 @@ As fotos são exibidas como **etiquetas de produtos na cena 3D** e nos cards do 
 - ARLA 32 20 L: Lima Acessórios / Tray
 
 As imagens e nomes comerciais pertencem aos respectivos titulares. Uso educativo, sem patrocínio ou afiliação; verificar termos de uso antes de redistribuir as fotos em outros projetos.
+
+## Pagamento V3: maquininha e dinheiro
+- **Pix:** na tela de uma maquininha estilizada, com QR puramente decorativo e não escaneável; confirmação simulada manual.
+- **Cartão:** terminal com teclado estilizado, débito/crédito, cartão virtual e animação de aproximação. Sem números ou senhas reais.
+- **Dinheiro:** representação de notas recebidas na mão (R$ 2–200), soma de cédulas, entrada manual e cálculo do troco.
+- O recibo mostra a forma de pagamento, sempre como "SIMULAÇÃO — SEM VALOR FISCAL".
+
+## Novos produtos
+O catálogo possui **45 produtos e serviços didáticos**: novos óleos Shell Helix HX3, HX6, HX7, Ultra e Hybrid, Rimula e fluidos, além de bebidas Coca-Cola, Sprite, Fanta, Kuat, Red Bull, Del Valle, água Crystal, KitKat, Doritos, Lay's, Ruffles, Oreo, Club Social, Trident, Halls, café e pão de queijo. Os nomes são de produtos/linhas reais com links para as referências de fabricantes; preços e operações são fictícios. Mais opções aparecem ao clicar na conveniência e na troca de óleo 3D.
+
+## Dispositivos
+O layout funciona com CSS responsivo para telas de smartphone, tablet, notebook e desktop; movimentação por toque ou teclado. Renderização 3D depende de WebGL. Imagens externas de produtos têm fallback.

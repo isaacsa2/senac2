@@ -9,6 +9,7 @@
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="./styles.css">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"}}</script>
+  <script src="./catalog-extra.js" defer></script>
   <script src="./app.js" defer></script>
   <script type="module" src="./scene.js"></script>
   <script type="module" src="./game.js"></script>
@@ -39,7 +40,7 @@
         <h1 id="hero-title">Seu posto.<br>Seu aprendizado.<br><em>Outra dimensão.</em></h1>
         <p>Explore um posto em 3D, descubra o que cada combustível e produto faz e pratique um atendimento no caixa — tudo no mesmo lugar.</p>
         <div class="hero-actions"><a class="button button-primary" href="#explorar">Explorar o posto <svg><use href="#i-arrow"></use></svg></a><a href="#produtos" class="button button-outline">Ver produtos</a></div>
-        <div class="hero-stats"><div><strong>3D</strong><span>interativo</span></div><div><strong>14</strong><span>itens no catálogo</span></div><div><strong>100%</strong><span>simulado</span></div></div>
+        <div class="hero-stats"><div><strong>3D</strong><span>interativo</span></div><div><strong id="catalog-count">14</strong><span>itens no catálogo</span></div><div><strong>100%</strong><span>simulado</span></div></div>
       </div>
       <div class="hero-aside" aria-hidden="true"><div class="hero-circle circle-a"></div><div class="hero-circle circle-b"></div><div class="hero-sticker"><span class="sticker-star">✳</span><span>Aprender<br>fazendo!</span></div><div class="hero-number">03<span>áreas para explorar</span></div><div class="hero-line line-a"></div><div class="hero-line line-b"></div></div>
     </section>
@@ -103,7 +104,63 @@
     <small class="fuel-disclaimer">A simulação utiliza preços fictícios e não interage com bombas de abastecimento.</small>
   </div></dialog>
   <dialog id="detail-dialog" class="modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><div id="detail-content"></div></div></dialog>
-  <dialog id="payment-dialog" class="modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><span class="section-kicker">FINALIZAR · SIMULAÇÃO</span><h2>Forma de pagamento</h2><p class="muted">Escolha uma opção fictícia. Nenhum dado financeiro será coletado.</p><div id="payment-summary" class="payment-summary"></div><fieldset class="payment-options"><legend>Como o cliente pagaria?</legend><label><input type="radio" name="payment" value="pix" checked><span>PIX (simulado)</span></label><label><input type="radio" name="payment" value="cartao"><span>Cartão (simulado)</span></label><label><input type="radio" name="payment" value="dinheiro"><span>Dinheiro (simulado)</span></label></fieldset><div id="cash-group" class="cash-group" hidden><label for="cash-received">Valor recebido (R$)</label><input type="number" min="0" step="0.01" id="cash-received" placeholder="Ex.: 100.00"><small id="cash-change" aria-live="polite"></small></div><p id="payment-error" class="form-error" role="alert"></p><button id="finish-sale" type="button" class="button button-primary button-full">Concluir venda de treinamento <svg><use href="#i-check"></use></svg></button></div></dialog>
+  <dialog id="payment-dialog" class="modal payment-dialog" aria-labelledby="payment-title">
+    <div class="modal-inner">
+      <button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar pagamento"><svg><use href="#i-x"></use></svg></button>
+      <span class="section-kicker">CAIXA · SIMULAÇÃO INTERATIVA</span>
+      <h2 id="payment-title">Hora de receber!</h2>
+      <p class="muted">Treine o atendimento com dinheiro em mãos ou com a maquininha. Nenhum pagamento real será processado.</p>
+      <div class="payment-total"><span>VALOR DA VENDA</span><strong id="payment-summary">R$ 0,00</strong></div>
+      <fieldset class="payment-options">
+        <legend>Como o cliente vai pagar?</legend>
+        <label class="method-tile"><input type="radio" name="payment" value="pix" checked><span class="method-emoji">▦</span><span>Pix<small>Na maquininha</small></span></label>
+        <label class="method-tile"><input type="radio" name="payment" value="cartao"><span class="method-emoji">▣</span><span>Cartão<small>Débito ou crédito</small></span></label>
+        <label class="method-tile"><input type="radio" name="payment" value="dinheiro"><span class="method-emoji">▤</span><span>Dinheiro<small>Na mão, com troco</small></span></label>
+      </fieldset>
+      <section class="payment-visual" id="payment-device" aria-label="Maquininha de pagamento demonstrativa">
+        <div class="reader-scene">
+          <div class="card-virtual" id="card-virtual" hidden aria-label="Cartão virtual demonstrativo">
+            <span>◈ BANCO DEMO</span><span class="card-chip"></span><strong>•••• &nbsp;•••• &nbsp;•••• &nbsp;0000</strong><small>CARTÃO FICTÍCIO</small>
+          </div>
+          <div class="reader-body" role="img" aria-label="Maquininha de cartão e Pix fictícia">
+            <div class="reader-top"><span>ECO<span>PAY</span></span><span>DEMO</span></div>
+            <div class="reader-screen">
+              <small id="terminal-screen-title">PIX · DEMONSTRAÇÃO</small>
+              <div class="reader-screen-amount" id="terminal-amount">R$ 0,00</div>
+              <div class="fake-qr" id="fake-qr" aria-label="Representação visual não escaneável de um código Pix" aria-hidden="true"></div>
+              <p id="terminal-screen-sub">Aguardando confirmação simulada</p>
+            </div>
+            <div class="reader-keypad" aria-hidden="true"><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span><span class="reader-red">✕</span><span>0</span><span class="reader-green">✓</span></div>
+            <div class="reader-slot" aria-hidden="true"></div>
+          </div>
+        </div>
+        <div class="terminal-controls">
+          <div id="card-type-group" hidden>
+            <label for="card-type">Modalidade do cartão</label>
+            <select id="card-type"><option value="debito">Débito</option><option value="credito">Crédito</option></select>
+          </div>
+          <p class="reader-instructions" id="terminal-instructions">O QR abaixo é apenas um desenho ilustrativo: não é possível escanear ou pagar.</p>
+          <div class="terminal-status" id="terminal-status" role="status">AGUARDANDO</div>
+          <button class="button button-dark button-full" type="button" id="terminal-confirm">Simular pagamento Pix</button>
+          <small>Operação offline, sem conta, chave Pix, senha ou dados bancários.</small>
+        </div>
+      </section>
+      <section id="cash-group" class="cash-section" hidden aria-label="Recebimento de dinheiro em espécie">
+        <div class="cash-art" aria-hidden="true"><div class="cash-note note-back">R$</div><div class="cash-note note-front"><small>REAL</small><strong id="cash-art-value">R$ 20</strong><span>NOTA ILUSTRATIVA</span></div><div class="cash-hand"><div class="cash-fingers"></div><div class="cash-palm"></div></div></div>
+        <h3>Cliente entregou dinheiro na mão</h3>
+        <p>Selecione as cédulas recebidas ou digite o valor total. Você pode combinar notas.</p>
+        <div class="cash-bills" role="group" aria-label="Adicionar cédulas fictícias">
+          <button type="button" data-cash-bill="2">R$ 2</button><button type="button" data-cash-bill="5">R$ 5</button><button type="button" data-cash-bill="10">R$ 10</button><button type="button" data-cash-bill="20">R$ 20</button><button type="button" data-cash-bill="50">R$ 50</button><button type="button" data-cash-bill="100">R$ 100</button><button type="button" data-cash-bill="200">R$ 200</button>
+        </div>
+        <label for="cash-received">Total recebido (R$)</label>
+        <div class="cash-input-row"><input type="number" id="cash-received" min="0" max="100000" step="0.01" inputmode="decimal" placeholder="Ex.: 100.00"><button type="button" id="cash-reset">Zerar</button></div>
+        <div class="cash-change-display" id="cash-change" aria-live="polite">Informe o valor recebido</div>
+      </section>
+      <p id="payment-error" class="form-error" role="alert"></p>
+      <button id="finish-sale" type="button" class="button button-primary button-full" disabled>Concluir venda de treinamento <svg><use href="#i-check"></use></svg></button>
+      <p class="pay-legal">SIMULAÇÃO EDUCACIONAL · NÃO É MAQUININHA OU QR PIX FUNCIONAL · NÃO EMITE DOCUMENTO FISCAL.</p>
+    </div>
+  </dialog>
   <dialog id="receipt-dialog" class="modal receipt-modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><div id="receipt-content"></div><button id="print-receipt" class="button button-dark button-full" type="button">Imprimir comprovante</button></div></dialog>
 </body>
 </html>

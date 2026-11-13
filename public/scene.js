@@ -135,6 +135,11 @@ function buildScene(){
       planeLabel(x<5.15?'Coca-Cola':'Red Bull',.34,.15,x,y,.58,'#ffffff',null,47);
     }
   }
+  // Maquininha estilizada sobre o balcão de conveniência.
+  box(.25,.35,.20,6.85,.87,.62,color('#263c39'));
+  box(.20,.18,.025,6.85,.99,.74,color('#b4e7ae'));
+  box(.16,.06,.03,6.85,.81,.74,color('#5b8274'));
+  planeLabel('PIX',.18,.09,6.85,1.01,.758,'#245239',null,50);
   // Ilha de bebidas na entrada: três embalagens maiores em destaque.
   for(const [x,c,name] of [[3.85,'#cf352d','COCA'],[5.15,'#496dba','RED BULL'],[6.5,'#72b3e5','ÁGUA']]){
     const material=color(c);
