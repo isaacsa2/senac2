@@ -60,12 +60,33 @@
   }
   function add(id){
     const p=productOf(id);if(!p)return;
+    if(p.unit==='L'&&window.ecoGame?.isActive()){
+      notify('No modo frentista, lance o combustível somente pela bomba após o abastecimento.');
+      return;
+    }
     const entry=cart.find(e=>e.id===id), amount=p.unit==='L'?20:1;
+    if(p.unit!=='L'&&p.category!=='servicos'){
+      const available=window.ECO_OPERATIONS?.retailCount?.(p);
+      if(Number.isFinite(available)&&(entry?.qty||0)+amount>available){
+        notify('Sem estoque suficiente de '+p.name+'. Consulte Operações para repor.');return;
+      }
+    }
     if(entry){entry.qty=Math.min(2000,entry.qty+amount);} else cart.push({id,qty:amount});
     persist();renderCart();notify('Adicionado ao PDV: '+p.name);
   }
   function adjust(id,delta){
     const entry=cart.find(e=>e.id===id);if(!entry)return;
+    const product=productOf(id);
+    if(product?.unit==='L'&&window.ecoGame?.isActive()){
+      notify('Litros do veículo vêm do visor da bomba e não podem ser alterados no caixa.');
+      return;
+    }
+    if(product?.unit!=='L'&&product?.category!=='servicos'&&delta>0){
+      const available=window.ECO_OPERATIONS?.retailCount?.(product);
+      if(Number.isFinite(available)&&entry.qty+delta>available){
+        notify('Quantidade maior que o estoque de '+product.name);return;
+      }
+    }
     entry.qty=Math.min(2000,Math.round((entry.qty+delta)*10)/10);
     if(entry.qty<=0)cart=cart.filter(e=>e.id!==id);
     persist();renderCart();
@@ -296,6 +317,14 @@
     function finishSale(){
     if(!cart.length)return;
     const method=paymentMethod();
+    const retailItems=cart.map(e=>{
+      const p=productOf(e.id);
+      return p?{id:p.id,category:p.category,qty:e.qty}:null;
+    }).filter(Boolean);
+    const retailCheck=window.ECO_OPERATIONS?.validateRetail?.(retailItems);
+    if(retailCheck&&!retailCheck.ok){
+      $('#payment-error').textContent=retailCheck.error;return;
+    }
     let creditRecord=null;
     if(method==='prazo'){
       try{creditRecord=sim.saveCredit(getCreditDetails());}
@@ -315,6 +344,11 @@
     const ref=String(now.getTime()).slice(-8);
     const summary=rows.map(e=>'<div class="row-receipt"><span>'+e.product.name+'<br>'+qtyText(e.product,e.qty)+' × '+money(e.product.price)+'</span><span>'+money(Math.round(e.qty*e.product.price))+'</span></div>').join('<br>');
     $('#receipt-content').innerHTML='<div class="receipt-print"><h2>ECOPOSTO 3D</h2><div style="text-align:center">Laboratório de PDV · Exemplo didático</div><div class="warning">SIMULAÇÃO — SEM VALOR FISCAL</div><div>Operação #'+ref+'</div><div>'+new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'medium'}).format(now)+'</div><hr>'+summary+'<hr><div class="row-receipt total-receipt"><span>TOTAL</span><span>'+money(total())+'</span></div><div>Pagamento: '+payNames[method]+'</div>'+(method==='dinheiro'?'<div>Ajuste favorável em espécie: -'+money(cash.discount)+'</div><div>Valor em dinheiro: '+money(cash.due)+'</div><div>Recebido: '+money(amountReceived)+'</div><div>Troco entregue: '+money(amountReceived-cash.due)+'</div>':method==='prazo'?'<div>Prazo: '+escapeHtml(creditRecord?.id||'')+' · vencimento '+escapeHtml(creditRecord?.due||'')+'</div>':'<div>Terminal: ECO PAY · modo de treinamento</div>')+'<hr><div style="text-align:center">Treinamento exclusivamente educativo.<br>Não comprova compra, pagamento ou abastecimento.</div></div>';
+    // A baixa de produtos físicos só ocorre após confirmar o pagamento fictício.
+    const retailResult=window.ECO_OPERATIONS?.consumeRetail?.(retailItems);
+    if(retailResult&&!retailResult.ok){
+      $('#payment-error').textContent=retailResult.error;return;
+    }
     // Emite evento antes de limpar o carrinho; o veículo só é liberado após venda.
     window.dispatchEvent(new CustomEvent('ecoposto:sale-complete',{detail:{
       method,productIds:rows.map(e=>e.product.id),value:method==='dinheiro'?cash.due:total(),creditId:creditRecord?.id||null
@@ -340,7 +374,13 @@
     if(btn.matches('[data-add-detail]')){const id=btn.dataset.addDetail;$('#detail-dialog').close();add(id);}
     if(btn.matches('[data-zone]'))chooseZone(btn.dataset.zone);
     if(btn.matches('[data-adjust]'))adjust(btn.dataset.adjust,Number(btn.dataset.delta));
-    if(btn.matches('[data-remove]')){cart=cart.filter(e=>e.id!==btn.dataset.remove);persist();renderCart();}
+    if(btn.matches('[data-remove]')){
+      const p=productOf(btn.dataset.remove);
+      if(p?.unit==='L'&&window.ecoGame?.isActive()){
+        notify('Combustível já abastecido: não é possível apagar o registro no modo frentista.');return;
+      }
+      cart=cart.filter(e=>e.id!==btn.dataset.remove);persist();renderCart();
+    }
     if(btn.matches('[data-close-dialog]'))btn.closest('dialog').close();
     if(btn.matches('[data-view]')){
       document.querySelectorAll('[data-view]').forEach(el=>el.classList.toggle('is-active',el===btn));
@@ -399,6 +439,15 @@
     if(!entry)return;
     const n=Number(event.target.value);
     const p=productOf(id),min=p?.unit==='L'?0.1:1;
+    if(p?.unit==='L'&&window.ecoGame?.isActive()){
+      event.target.value=entry.qty;notify('Volume registrado pela bomba não pode ser editado.');return;
+    }
+    if(p?.unit!=='L'&&p?.category!=='servicos'){
+      const available=window.ECO_OPERATIONS?.retailCount?.(p);
+      if(Number.isFinite(available)&&n>available){
+        event.target.value=entry.qty;notify('Quantidade acima do estoque disponível.');return;
+      }
+    }
     const valid=Number.isFinite(n)&&n>=min&&n<=2000&&(p?.unit==='L'?Math.abs(n*10-Math.round(n*10))<1e-7:Number.isInteger(n));
     if(!valid){event.target.value=entry.qty;notify('Informe uma quantidade válida (litros em décimos ou produtos inteiros).');return;}
     entry.qty=n;persist();renderCart();
@@ -411,7 +460,7 @@
     const id=event.detail?.id;
     const litres=Number(event.detail?.litres);
     const p=productOf(id);
-    if(!p||p.unit!=='L'||!Number.isFinite(litres)||litres<1||litres>200||Math.abs(litres*10-Math.round(litres*10))>1e-7)return;
+    if(!p||p.unit!=='L'||!Number.isFinite(litres)||litres<.1||litres>200||Math.abs(litres*10-Math.round(litres*10))>1e-7)return;
     const entry=cart.find(e=>e.id===id);
     if(entry)entry.qty=Math.min(2000,Math.round((entry.qty+litres)*10)/10);
     else cart.push({id,qty:litres});
@@ -452,9 +501,13 @@
     if(result)$('#traffic-count').textContent='Até '+result.max+' veículos';
   }
   density.addEventListener('change',updateDensity);
+  const weatherSelect=$('#weather-mode');
+  function updateWeather(){window.ecoScene?.setWeather?.(weatherSelect.value);}
+  weatherSelect.addEventListener('change',updateWeather);
+  window.addEventListener('ecoposto:scene-ready',updateWeather);
   window.addEventListener('ecoposto:scene-ready',updateDensity);
   window.addEventListener('ecoposto:scene-ready',updateQuality);
-  if(window.ecoScene){updateQuality();updateDensity();}
+  if(window.ecoScene){updateQuality();updateDensity();updateWeather();}
 
   // Tela cheia nativa da cena (inclui HUD e barra de ferramentas).
   // Se o navegador não expuser Fullscreen API, usa fallback CSS reversível.

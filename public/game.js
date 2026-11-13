@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import {createVehicle,disposeVehicle} from './world-extra.js?v=traffic-v6';
-import {buildRoute,sampleRoute,rotateTowards} from './traffic-paths.js?v=traffic-v6';
+import {createVehicle,disposeVehicle} from './world-extra.js?v=realism-v7';
+import {buildRoute,sampleRoute,rotateTowards} from './traffic-paths.js?v=realism-v7';
 
 // Simulação educativa leve: o mundo 3D fica sob responsabilidade de scene.js.
 // Esta camada implementa personagem, proximidade, missões e abastecimento.
@@ -32,6 +32,7 @@ function initialise(){
   const ctx=window.ecoScene.getContext();
   const {scene,world,stage}=ctx;
   const sim=window.ECO_SIM;
+  const ops=window.ECO_OPERATIONS;
   const cameraRig={yaw:.56,pitch:.56,distance:7.4,firstPerson:false,dragging:false,pointerId:null,lastX:0,lastY:0};
   const cameraRay=new THREE.Raycaster();
   const player=new THREE.Group();
@@ -45,11 +46,22 @@ function initialise(){
   primitive(new THREE.CylinderGeometry(.22,.31,.66,8),shirt,0,1.06,0);
   primitive(new THREE.SphereGeometry(.22,10,8),face,0,1.62,0);
   primitive(new THREE.BoxGeometry(.47,.18,.31),pants,0,.66,0);
+  const legs=[],arms=[];
   for(const dx of [-.14,.14]){
-    primitive(new THREE.BoxGeometry(.15,.53,.16),pants,dx,.35,0);
+    legs.push(primitive(new THREE.BoxGeometry(.15,.53,.16),pants,dx,.35,0));
     primitive(new THREE.BoxGeometry(.18,.13,.28),boots,dx,.08,-.055);
   }
-  for(const dx of [-.29,.29])primitive(new THREE.BoxGeometry(.13,.56,.16),shirt,dx,1.06,0);
+  for(const dx of [-.29,.29])arms.push(primitive(new THREE.BoxGeometry(.13,.56,.16),shirt,dx,1.06,0));
+  let strideTime=0;
+  function animateAttendant(dt,moving){
+    strideTime+=dt*(moving?10:3);
+    const wave=moving?Math.sin(strideTime):0;
+    for(let i=0;i<2;i++){
+      const dir=i===0?1:-1,alpha=Math.min(1,dt*14);
+      legs[i].rotation.x+=((wave*.39*dir)-legs[i].rotation.x)*alpha;
+      arms[i].rotation.x+=((-wave*.31*dir)-arms[i].rotation.x)*alpha;
+    }
+  }
   primitive(new THREE.BoxGeometry(.48,.06,.40),pants,0,1.83,-.03);
   primitive(new THREE.BoxGeometry(.43,.13,.14),pants,0,1.78,-.25);
   // Ponto inicial fora da vaga dos carros que chegam para abastecer.
@@ -161,6 +173,7 @@ function initialise(){
   $('game-hud').querySelector('.game-hud-top').insertBefore(nightButton,$('exit-game'));
   nightButton.addEventListener('click',()=>{
     night=!night;window.ecoScene.setNight(night);
+    currentCar?.group.userData.setLights(night);
     nightButton.textContent=night?'☀ Dia':'☾ Noite';
   });
   const cameraButton=document.createElement('button');
@@ -225,7 +238,7 @@ function initialise(){
       :order.requested+' L de '+fuel?.name;
     const statuses={arriving:'Veículo chegando à bomba…',parked:'Pedido: '+request,
       filled:'Abastecido: '+order.filled.toFixed(1).replace('.',',')+' L · Receber no caixa',
-      paid:'Venda registrada · liberar veículo',leaving:'Veículo saindo do posto…'};
+      paid:'Venda registrada · liberar veículo',boarding:'Cliente entrando no carro…',leaving:'Veículo saindo do posto…'};
     carStatus(statuses[state]||request,state==='paid'?'CONCLUÍDO':state==='filled'?'PAGAMENTO':state==='arriving'?'CHEGANDO':state==='leaving'?'SAINDO':'CLIENTE');
     $('customer-next').disabled=true;
     $('customer-release').disabled=state!=='paid';
@@ -239,6 +252,7 @@ function initialise(){
     if(currentCar||!sim)return;
     const serial=customerSerial++;
     const order=sim.createCustomer(serial,Math.floor(Math.random()*6));
+    order.arrivedAt=null;order.mistakes=0;
     const fuel=pumpList.find(p=>p.id===order.fuelId);
     if(!fuel){
       console.warn('EcoPosto: combustível inexistente no pedido do veículo.',order.fuelId);
@@ -253,6 +267,7 @@ function initialise(){
     const finalX=fuel.x+.20;
     vehicle.position.set(entryX,.18,5.15);
     vehicle.rotation.y=0;
+    vehicle.userData.setLights(night);
     world.add(vehicle);
     const arrival=buildRoute({id:'customer-arrival',segments:[
       line(entryX,5.15,finalX-4.0,5.15),
@@ -263,10 +278,58 @@ function initialise(){
       route:arrival,distance:0,velocity:0};
     updateCustomerHUD();ctx.requestRender();
   }
+  // Cliente animado: desembarca, aguarda o frentista e embarca após o pagamento.
+  function makeNPC(customer){
+    const group=new THREE.Group();
+    const coat=new THREE.MeshStandardMaterial({color:['#6589a2','#b17d60','#829874','#b09b60'][Number(customer.order.plate.replace(/\D/g,''))%4],roughness:.82});
+    const skin=new THREE.MeshStandardMaterial({color:'#bd8b68',roughness:.85});
+    const trouser=new THREE.MeshStandardMaterial({color:'#314658',roughness:.85});
+    const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.19,.24,.63,8),coat);trunk.position.y=1.03;group.add(trunk);
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.19,8,7),skin);head.position.y=1.57;group.add(head);
+    const parts={arms:[],legs:[]};
+    for(const sx of [-.13,.13]){
+      const leg=new THREE.Mesh(new THREE.BoxGeometry(.14,.49,.15),trouser);
+      leg.position.set(sx,.40,0);group.add(leg);parts.legs.push(leg);
+      const arm=new THREE.Mesh(new THREE.BoxGeometry(.12,.48,.14),coat);
+      arm.position.set(Math.sign(sx)*.26,1.05,0);group.add(arm);parts.arms.push(arm);
+    }
+    const car=customer.group.position;
+    group.position.set(car.x-.42,.18,car.z-.72);
+    world.add(group);
+    customer.npc={group,...parts,t:0};
+    customer.group.userData.setDoor(true);
+  }
+  function updateNPC(customer,dt){
+    const npc=customer.npc;if(!npc)return false;
+    npc.t+=dt;
+    const car=customer.group.position;
+    const target=customer.state==='boarding'?car.z-.68:car.z-1.66;
+    npc.group.position.z+=(target-npc.group.position.z)*Math.min(1,dt*2.8);
+    const moving=Math.abs(target-npc.group.position.z)>.10;
+    const swing=moving?Math.sin(npc.t*8)*.29:0;
+    npc.legs[0].rotation.x=swing;npc.legs[1].rotation.x=-swing;
+    npc.arms[0].rotation.x=-swing;
+    npc.arms[1].rotation.x=moving?swing:Math.sin(npc.t*2.7)*.20;
+    return moving||npc.t<3;
+  }
   function animateCustomer(delta){
     if(!currentCar)return false;
     const customer=currentCar;
-    if(customer.state!=='arriving'&&customer.state!=='leaving')return false;
+    const cycle=Math.max(0,Math.min(.05,delta));
+    customer.group.userData.animateBody(cycle);
+    const npcMoving=updateNPC(customer,cycle);
+    if(customer.state==='boarding'){
+      customer.boardElapsed=(customer.boardElapsed||0)+cycle;
+      if(customer.boardElapsed>1.6&&customer.npc){
+        disposeVehicle(customer.npc.group);customer.npc=null;
+        customer.group.userData.setDoor(false);
+      }
+      if(customer.boardElapsed>2.25){
+        customer.state='leaving';customer.velocity=0;updateCustomerHUD();
+      }
+      return true;
+    }
+    if(customer.state!=='arriving'&&customer.state!=='leaving')return npcMoving;
     const remaining=Math.max(0,customer.route.length-customer.distance);
     const targetSpeed=remaining<3?Math.min(3.2,remaining*1.7):3.4;
     const accel=targetSpeed<customer.velocity?4.0:2.0;
@@ -284,8 +347,10 @@ function initialise(){
       if(customer.state==='arriving'){
         customer.group.userData.setBraking(true);
         customer.group.userData.setTurnSignal(false,false);
-        customer.state='parked';customer.velocity=0;updateCustomerHUD();
+        customer.state='parked';customer.velocity=0;customer.order.arrivedAt=Date.now();
+        makeNPC(customer);updateCustomerHUD();
       }else{
+        if(customer.npc){disposeVehicle(customer.npc.group);customer.npc=null;}
         disposeVehicle(customer.group);
         currentCar=null;completedCars++;updateCustomerHUD();
       }
@@ -294,6 +359,10 @@ function initialise(){
   }
   function releaseCar(){
     if(!currentCar||currentCar.state!=='paid')return;
+    const order=currentCar.order;
+    const elapsed=Math.max(0,Math.round((Date.now()-(order.arrivedAt||Date.now()))/1000));
+    const satisfaction=Math.max(0,100-Math.max(0,Math.floor((elapsed-75)/7))*2-(order.mistakes||0)*15);
+    window.dispatchEvent(new CustomEvent('ecoposto:customer-released',{detail:{satisfaction,waitingSeconds:elapsed}}));
     const p=currentCar.group.position;
     const exitStart=p.x;
     const bendX=Math.min(10,exitStart+3.3);
@@ -307,7 +376,8 @@ function initialise(){
     ]});
     currentCar.route=depart;
     currentCar.distance=0;currentCar.velocity=0;
-    currentCar.state='leaving';updateCustomerHUD();
+    currentCar.state='boarding';currentCar.boardElapsed=0;
+    currentCar.group.userData.setDoor(true);updateCustomerHUD();
   }
   function selectNozzle(island){
     const fuel=pumpList.filter(p=>p.island===island.id);
@@ -326,7 +396,10 @@ function initialise(){
           $('nozzle-warning').textContent='O veículo ainda não está pronto para abastecimento.';return;
         }
         if(currentCar&&pump.id!==wanted){
-          $('nozzle-warning').textContent='Bico incorreto para o pedido do cliente. Selecione '+customerFuel()?.name+'.';return;
+          $('nozzle-warning').textContent='Bico incorreto para o pedido do cliente. Selecione '+customerFuel()?.name+'.';
+          currentCar.order.mistakes=(currentCar.order.mistakes||0)+1;
+          window.dispatchEvent(new CustomEvent('ecoposto:training-warning',{detail:{message:'Tentativa de bico incorreto: '+pump.name}}));
+          beep(220,.18);return;
         }
         nozzleDialog.close();openFuel(pump);
       });
@@ -428,6 +501,7 @@ function initialise(){
     lastFrame=now;
     if(!document.hidden){
       const moved=move(dt);
+      animateAttendant(dt,moved);
       const cameraMoving=updateCamera(dt);
       const carMoved=animateCustomer(dt);
       const closeToDoor=Math.hypot(player.position.x+2.84,player.position.z+6.65)<2.15 || (player.position.z<-6.75&&player.position.z>-10.40&&player.position.x>-5.1&&player.position.x<-.5);
@@ -544,31 +618,117 @@ function initialise(){
     btn.addEventListener('pointercancel',release);
     btn.addEventListener('lostpointercapture',release);
   }
+  // Abastecimento com estados claros e visor em centavos, limitado pelo tanque e estoque.
   const closeFuel=$('fuel-close'),targetInput=$('fuel-target'),vehicle=$('fuel-vehicle');
+  const modeInput=$('fuel-mode'),moneyInput=$('fuel-value-target'),speedInput=$('fuel-speed');
+  const engineOff=$('fuel-engine-off'),connectButton=$('fuel-connect');
+  const error=$('fuel-error');
+  const message=(text,penalize=false)=>{
+    error.textContent=text;
+    if(penalize){
+      if(currentCar)currentCar.order.mistakes=(currentCar.order.mistakes||0)+1;
+      window.dispatchEvent(new CustomEvent('ecoposto:training-warning',{detail:{message:text}}));
+      beep(240,.16);
+    }
+  };
+  function orderTankFree(){
+    if(!currentCar)return 0;
+    const o=currentCar.order;
+    return Math.max(0,Math.round((o.capacity-o.tank)*10));
+  }
+  function chosenPlan(){
+    if(!filling||!ops)return {ok:false,error:'Sistema de estoque não inicializado.'};
+    return ops.planFill({
+      fuelId:filling.product.id,unitPriceCents:filling.product.price,mode:modeInput.value,
+      requestLitres:Number(targetInput.value),requestCents:Math.round(Number(moneyInput.value)*100),
+      tankFreeDeci:orderTankFree()
+    });
+  }
+  function updateFuelDisplay(){
+    if(!filling)return;
+    const totalTank=currentCar?.order.capacity||0;
+    const currentTank=currentCar?.order.tank||0;
+    const available=ops?.tank(filling.product.id);
+    $('fuel-tank-status').textContent=currentCar?
+      currentTank.toFixed(1).replace('.',',')+' / '+totalTank.toFixed(1).replace('.',',')+' L':
+      'Aguarde um veículo';
+    $('fuel-stock-status').textContent=available?
+      available.litres.toLocaleString('pt-BR',{maximumFractionDigits:1})+' L ('+available.percent+'%)':'—';
+    const mode=modeInput.value;
+    $('fuel-litres-field').hidden=mode!=='litros';
+    $('fuel-value-field').hidden=mode!=='valor';
+    const plan=filling.running||filling.started?filling.plan:chosenPlan();
+    $('fuel-projection').textContent=plan?.ok?
+      plan.litres.toFixed(1).replace('.',',')+' L · '+money(plan.totalCents):
+      (plan?.error||'—');
+    if(!filling.started){
+      const ready=!!plan?.ok&&!!currentCar&&currentCar.state==='parked'
+        &&currentCar.order.fuelId===filling.product.id&&engineOff.checked&&filling.connected;
+      $('fuel-start').disabled=!ready;
+    }
+    if(!filling.running){
+      $('fuel-pause').disabled=!filling.started||filling.completed||!filling.connected;
+      $('fuel-finish').disabled=!filling.started||filling.deliveredDeci<1||filling.connected;
+    }
+  }
+  function setNozzleState(attached){
+    if(!filling)return;
+    currentCar?.group.userData?.setFuelCap(attached);
+    filling.connected=attached;
+    if(attached)filling.everConnected=true;
+    connectButton.textContent=attached?'Retirar bico do tanque':'Encaixar bico no tanque';
+    connectButton.classList.toggle('is-connected',attached);
+    connectButton.setAttribute('aria-pressed',String(attached));
+    window.ecoScene?.setHose?.(attached?{pump:filling.pump,vehicle:currentCar?.group,attached:true,flowing:filling.running}:null);
+    $('fuel-safety-status').textContent=attached?
+      'Bico encaixado · pode configurar a meta e iniciar.':
+      (filling.started?'Bico retirado · registre no PDV.':'Bico guardado · aguardando conexão.');
+    updateFuelDisplay();
+  }
+  function toggleNozzle(){
+    if(!filling)return;
+    if(filling.running){message('Pare o abastecimento antes de retirar o bico.',true);return;}
+    if(!engineOff.checked&&!filling.connected){
+      message('Desligue o motor e imobilize o veículo antes de encaixar o bico.',true);return;
+    }
+    if(!currentCar||currentCar.state!=='parked'){
+      message('Aguarde o veículo estacionar na bomba.',false);return;
+    }
+    setNozzleState(!filling.connected);message('');
+    beep(680,.09);
+  }
   function openFuel(pump){
     const product=window.ecoCatalog?.fuelProducts?.find(p=>p.id===pump.id);
     if(!product)return;
     fuelSequence++;
-    filling={pump,product,litres:0,target:20,running:false,finished:false,last:0};
+    filling={pump,product,deliveredDeci:0,exactDeci:0,targetDeci:0,
+      running:false,started:false,completed:false,finished:false,connected:false,
+      everConnected:false,last:0,plan:null};
     $('fuel-product-name').textContent=product.name;
     $('fuel-unit-price').textContent=money(product.price)+' / L';
-    vehicle.value=pump.type==='flex'?'flex':pump.type==='diesel-antigo'?'diesel-antigo':'diesel';
-    // Pedido realista: valor em reais, litros ou completar tanque.
-    const selected=currentCar?.state==='parked'&&currentCar.order.fuelId===pump.id?currentCar.order:null;
-    const price=product.price;
-    const amount=selected?(selected.orderType==='valor'?Math.round(5000/price):
-      selected.orderType==='completar'?Math.max(1,selected.capacity-selected.tank):selected.requested):20;
-    targetInput.value=String(amount);targetInput.max=pump.type==='flex'?'80':'200';
-    targetInput.disabled=false;vehicle.disabled=false;
-    $('fuel-error').textContent='';
-    $('fuel-start').textContent='Iniciar abastecimento';
-    $('fuel-start').disabled=false;
-    $('fuel-pause').disabled=true;$('fuel-finish').disabled=true;
-    resetMeter();dialog.showModal();beep(520,.08);
+    vehicle.value=currentCar?.order.kind||
+      (pump.type==='flex'?'flex':pump.type==='diesel-antigo'?'diesel-antigo':'diesel');
+    vehicle.disabled=!!currentCar;
+    const order=currentCar?.state==='parked'&&currentCar.order.fuelId===pump.id?currentCar.order:null;
+    modeInput.value=order?.orderType||'litros';
+    targetInput.value=String(order?.requested||20);
+    moneyInput.value='50.00';
+    targetInput.max=String(order?Math.max(.1,order.capacity-order.tank):80);
+    targetInput.disabled=false;
+    engineOff.checked=false;engineOff.disabled=false;
+    speedInput.value='3';speedInput.disabled=false;modeInput.disabled=false;moneyInput.disabled=false;
+    connectButton.disabled=false;connectButton.textContent='Encaixar bico no tanque';
+    connectButton.classList.remove('is-connected');connectButton.setAttribute('aria-pressed','false');
+    $('fuel-start').textContent='Iniciar abastecimento';$('fuel-start').disabled=true;
+    $('fuel-pause').disabled=true;$('fuel-pause').textContent='Pausar';
+    $('fuel-finish').disabled=true;
+    $('fuel-safety-status').textContent='1. Desligue o motor. 2. Encaixe o bico. 3. Configure a meta.';
+    error.textContent='';
+    resetMeter();updateFuelDisplay();
+    dialog.showModal();beep(520,.08);
   }
   function resetMeter(){
-    $('fuel-litres').textContent='0,0 L';
-    $('fuel-amount').textContent=money(0);
+    $('fuel-litres').textContent='0,0 L';$('fuel-amount').textContent=money(0);
     $('fuel-progress-bar').style.width='0%';
   }
   function compatible(pump,choice){
@@ -578,21 +738,31 @@ function initialise(){
     return false;
   }
   function startFilling(){
-    if(!filling||filling.finished)return;
-    const qty=Number(targetInput.value);
-    const maximum=vehicle.value==='flex'?80:200;
-    $('fuel-error').textContent='';
-    if(!Number.isInteger(qty)||qty<1||qty>maximum){
-      $('fuel-error').textContent='Escolha um volume inteiro entre 1 e '+maximum+' litros.';return;
+    if(!filling||filling.finished||filling.started)return;
+    error.textContent='';
+    if(!currentCar||currentCar.state!=='parked'){message('Aguarde o cliente estacionar.',false);return;}
+    if(!engineOff.checked){message('Desligue o motor antes de iniciar.',true);return;}
+    if(!filling.connected){message('Encaixe o bico antes de iniciar.',true);return;}
+    if(filling.product.id!==currentCar.order.fuelId||!compatible(filling.pump,vehicle.value)){
+      message('Combustível incompatível com o pedido ou veículo.',true);return;
     }
-    if(!compatible(filling.pump,vehicle.value)){
-      $('fuel-error').textContent='Combustível incompatível com o veículo selecionado. Verifique o tipo de motor e escolha a bomba correta.';return;
-    }
-    filling.target=qty;filling.litres=0;filling.last=0;filling.running=true;
-    targetInput.disabled=true;vehicle.disabled=true;
-    $('fuel-start').disabled=true;$('fuel-pause').disabled=false;
-    $('fuel-pause').textContent='Pausar';
-    $('fuel-finish').disabled=true; // pode finalizar parcial depois de pelo menos 1 L
+    const plan=chosenPlan();
+    if(!plan.ok){message(plan.error);return;}
+    filling.plan=plan;
+    filling.targetDeci=plan.deci;
+    filling.deliveredDeci=0;
+    filling.exactDeci=0;
+    filling.last=0;
+    filling.running=true;
+    filling.started=true;
+    filling.completed=false;
+    modeInput.disabled=true;targetInput.disabled=true;moneyInput.disabled=true;vehicle.disabled=true;
+    speedInput.disabled=true;engineOff.disabled=true;
+    $('fuel-start').disabled=true;$('fuel-pause').disabled=false;$('fuel-pause').textContent='Pausar';
+    $('fuel-finish').disabled=true;
+    connectButton.disabled=false;
+    $('fuel-safety-status').textContent='Abastecendo · mantenha o bico conectado.';
+    window.ecoScene?.setHose?.({pump:filling.pump,vehicle:currentCar.group,attached:true,flowing:true});
     beep(520,.09);
     const token=++fuelSequence;
     requestAnimationFrame(t=>stepFuel(t,token));
@@ -600,70 +770,108 @@ function initialise(){
   function stepFuel(t,token){
     const f=filling;
     if(!f||!f.running||!dialog.open||token!==fuelSequence)return;
-    const elapsed=f.last?Math.min(.06,(t-f.last)/1000):0;
+    const elapsed=f.last?Math.max(0,Math.min(.08,(t-f.last)/1000)):0;
     f.last=t;
-    f.litres=Math.min(f.target,Math.round((f.litres+elapsed*6.5)*10)/10);
-    const displayed=Math.min(f.target,f.litres);
-    $('fuel-litres').textContent=displayed.toFixed(1).replace('.',',')+' L';
-    $('fuel-amount').textContent=money(Math.round(displayed*f.product.price));
-    $('fuel-progress-bar').style.width=(displayed/f.target*100).toFixed(1)+'%';
-    $('fuel-finish').disabled=displayed<1;
-    if(displayed>=f.target){
-      f.running=false;
-      $('fuel-pause').disabled=true;
-      $('fuel-start').disabled=true;
-      $('fuel-finish').disabled=false;
-      $('fuel-error').textContent='Meta atingida! Registre os litros no PDV.';
-      beep(880,.14);
-      return;
+    const speed=Number(speedInput.value)||3;
+    const rate=(f.plan.flowLpm||34)/60*10*speed;
+    f.exactDeci=Math.min(f.targetDeci,f.exactDeci+elapsed*rate);
+    f.deliveredDeci=Math.min(f.targetDeci,Math.floor(f.exactDeci+1e-7));
+    const litres=f.deliveredDeci/10;
+    $('fuel-litres').textContent=litres.toFixed(1).replace('.',',')+' L';
+    $('fuel-amount').textContent=money(Math.round(f.deliveredDeci*f.product.price/10));
+    $('fuel-progress-bar').style.width=(f.exactDeci/f.targetDeci*100).toFixed(1)+'%';
+    if(f.exactDeci>=f.targetDeci){
+      f.completed=true;f.running=false;f.last=0;
+      $('fuel-pause').disabled=true;$('fuel-start').disabled=true;
+      $('fuel-safety-status').textContent='Meta atingida. Retire o bico e registre no PDV.';
+      message('Meta atingida: '+litres.toFixed(1).replace('.',',')+' L · '+money(Math.round(f.deliveredDeci*f.product.price/10)));
+      window.ecoScene?.setHose?.({pump:f.pump,vehicle:currentCar?.group,attached:true,flowing:false});
+      beep(880,.16);updateFuelDisplay();return;
     }
     requestAnimationFrame(now=>stepFuel(now,token));
   }
   function pauseFilling(){
-    if(!filling)return;
+    if(!filling||!filling.started||filling.completed)return;
     if(filling.running){
       filling.running=false;filling.last=0;fuelSequence++;
       $('fuel-pause').textContent='Retomar';
+      $('fuel-safety-status').textContent='Bomba pausada. Retome ou retire o bico para finalizar o volume parcial.';
+      window.ecoScene?.setHose?.({pump:filling.pump,vehicle:currentCar?.group,attached:true,flowing:false});
       beep(460,.07);
     }else{
+      if(!filling.connected){message('Reconecte o bico antes de retomar.');return;}
       filling.running=true;filling.last=0;
-      $('fuel-pause').textContent='Pausar';
+      $('fuel-pause').textContent='Pausar';$('fuel-safety-status').textContent='Abastecendo · fluxo retomado.';
+      window.ecoScene?.setHose?.({pump:filling.pump,vehicle:currentCar?.group,attached:true,flowing:true});
       const token=++fuelSequence;
       requestAnimationFrame(t=>stepFuel(t,token));
     }
+    updateFuelDisplay();
   }
   function commitFuel(){
-    if(!filling||filling.litres<1||filling.finished)return;
+    if(!filling||!filling.started||filling.deliveredDeci<1||filling.finished)return;
+    if(filling.connected||filling.running){message('Pare a bomba e retire o bico antes de registrar.',true);return;}
+    const record=ops?.dispense(filling.product.id,filling.deliveredDeci,filling.product.price);
+    if(!record?.ok){message(record?.error||'Erro ao atualizar tanque subterrâneo.');return;}
     filling.running=false;filling.finished=true;fuelSequence++;
-    const litres=Math.round(filling.litres*10)/10;
-    window.dispatchEvent(new CustomEvent('ecoposto:fill-complete',{detail:{id:filling.product.id,litres}}));
-    states.runs+=1;
+    const litres=filling.deliveredDeci/10;
+    window.dispatchEvent(new CustomEvent('ecoposto:fill-complete',{detail:{
+      id:filling.product.id,litres,amountCents:record.amountCents,training:true
+    }}));
+    states.runs++;
     states.liters=Math.round((states.liters+litres)*10)/10;
     if(currentCar?.state==='parked'&&currentCar.order.fuelId===filling.product.id){
       currentCar.order.filled=litres;
-      currentCar.order.tank=Math.min(currentCar.order.capacity,currentCar.order.tank+litres);
+      currentCar.order.tank=Math.min(currentCar.order.capacity,Math.round((currentCar.order.tank+litres)*10)/10);
       currentCar.state='filled';updateCustomerHUD();
     }
     beep(950,.18);
-    dialog.close();
-    filling=null;
-    updateHud();
+    window.ecoScene?.setHose?.(null);
+    currentCar?.group.userData?.setFuelCap(false);
+    dialog.close();filling=null;updateHud();
   }
-  closeFuel.addEventListener('click',()=>dialog.close());
+  function discardFuel(){
+    if(!filling){dialog.close();return;}
+    if(filling.deliveredDeci>=1&&!filling.finished){
+      message('Há combustível abastecido. Pare a bomba, retire o bico e registre no PDV.',true);return;
+    }
+    filling.running=false;fuelSequence++;window.ecoScene?.setHose?.(null);
+    currentCar?.group.userData?.setFuelCap(false);
+    dialog.close();
+  }
+  closeFuel.addEventListener('click',discardFuel);
   $('fuel-start').addEventListener('click',startFilling);
   $('fuel-pause').addEventListener('click',pauseFilling);
   $('fuel-finish').addEventListener('click',commitFuel);
-  vehicle.addEventListener('change',()=>{
-    targetInput.max=vehicle.value==='flex'?'80':'200';
-    if(Number(targetInput.value)>Number(targetInput.max))targetInput.value=targetInput.max;
+  connectButton.addEventListener('click',toggleNozzle);
+  engineOff.addEventListener('change',()=>{
+    if(!engineOff.checked&&filling?.connected){
+      setNozzleState(false);
+    }
+    updateFuelDisplay();
+  });
+  for(const input of [targetInput,moneyInput,modeInput,speedInput])
+    input.addEventListener('input',()=>{if(filling&&!filling.started)updateFuelDisplay();});
+  vehicle.addEventListener('change',updateFuelDisplay);
+  dialog.addEventListener('cancel',event=>{
+    if(filling?.deliveredDeci>=1&&!filling.finished){
+      event.preventDefault();message('Registre os litros antes de fechar o abastecimento.');return;
+    }
+    fuelSequence++;window.ecoScene?.setHose?.(null);
   });
   dialog.addEventListener('close',()=>{
     if(filling){filling.running=false;filling=null;fuelSequence++;}
+    window.ecoScene?.setHose?.(null);
+    currentCar?.group.userData?.setFuelCap(false);
   });
-  // Exibição pública mínima para testes automatizados de jogabilidade.
+    // Exibição pública mínima para testes automatizados de jogabilidade.
   window.ecoGame={start,stop,interact,isActive:()=>states.active,near:()=>nearest(),
     getPumpIds:()=>pumpList.map(p=>p.id),getIslands:()=>pumpIslands.map(x=>x.id),
-    currentCustomer:()=>currentCar?.order||null,spawnCustomer:createQueueCar};
+    currentCustomer:()=>currentCar?.order||null,spawnCustomer:createQueueCar,
+    getPlayerPosition:()=>({x:player.position.x,y:player.position.y,z:player.position.z}),
+    getCustomerState:()=>currentCar?.state||null,
+    getFuelSession:()=>filling?{id:filling.product.id,litres:filling.deliveredDeci/10,
+      connected:filling.connected,running:filling.running,finished:filling.finished}:null};
 }
 if(window.ecoScene)initialise();
 else window.addEventListener('ecoposto:scene-ready',initialise,{once:true});

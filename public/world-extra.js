@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {buildTrafficRoutes,sampleRoute,trafficLightPhase,rotateTowards,wheelRotationForTravel} from './traffic-paths.js?v=traffic-v6';
+import {buildTrafficRoutes,sampleRoute,trafficLightPhase,rotateTowards,wheelRotationForTravel} from './traffic-paths.js?v=realism-v7';
 
 // Ambientação externa com geometria original e leve; sem pacotes de modelos.
 const surface=(hex,roughness=.85,metalness=.01)=>new THREE.MeshStandardMaterial({color:hex,roughness,metalness});
@@ -15,6 +15,7 @@ export function createVehicle(tint='#29739a',variant='car'){
   const black=surface('#252b32',.77),white=surface('#f7f1d5',.3),indicator=surface('#e59b37',.42);
   const brakeMat=surface('#ae3334',.38);
   brakeMat.emissive.set('#e42727');brakeMat.emissiveIntensity=.11;
+  white.emissive.set('#fff6d0');white.emissiveIntensity=.10;
   indicator.emissive.set('#f5a943');indicator.emissiveIntensity=.04;
   const type=['car','hatch','suv','pickup','van','bus'].includes(variant)?variant:'car';
   const length=type==='bus'?4.80:type==='pickup'?3.5:type==='van'?3.55:type==='suv'?3.22:type==='hatch'?2.56:2.88;
@@ -67,8 +68,17 @@ export function createVehicle(tint='#29739a',variant='car'){
     center.rotation.x=Math.PI/2;pivot.add(center);
     wheels.push(pivot);
   }
-  const fuelCap=box(.075,.15,.17,-length*.28,.86,-.72,rim);
-  let accumulatedDistance=0;
+  // Porta do motorista animável e portinhola de combustível (lado da bomba).
+  const driverDoorPivot=new THREE.Group();
+  driverDoorPivot.position.set(-Math.min(.52,length*.2),1.09,-.708);
+  root.add(driverDoorPivot);
+  box(.67,.59,.052,-.33,0,0,paint,driverDoorPivot);
+  box(.53,.19,.058,-.33,.20,-.005,glass,driverDoorPivot);
+  box(.12,.042,.028,-.51,-.11,-.045,rim,driverDoorPivot);
+  const fuelCapPivot=new THREE.Group();
+  fuelCapPivot.position.set(-length*.28,.86,-.718);root.add(fuelCapPivot);
+  const fuelCap=box(.075,.15,.17,0,0,0,rim,fuelCapPivot);
+  let accumulatedDistance=0,doorAngle=0,doorTarget=0,capAngle=0,capTarget=0;
   root.userData={
     wheels,fuelCap,variant:type,axleAxis:'Z',forwardAxis:'X',wheelRadius:.35,
     spinWheels(metres){
@@ -80,6 +90,16 @@ export function createVehicle(tint='#29739a',variant='car'){
     setBraking(active){brakeMat.emissiveIntensity=active?1.4:.12;},
     setTurnSignal(active,on){
       indicator.emissiveIntensity=active&&on?1.25:.04;
+    },
+    setLights(enabled){white.emissiveIntensity=enabled?1.35:.10;},
+    setDoor(open){doorTarget=open?-.83:0;},
+    setFuelCap(open){capTarget=open?-.8:0;},
+    animateBody(dt){
+      const t=Math.min(1,Math.max(0,dt)*7);
+      doorAngle+=(doorTarget-doorAngle)*t;
+      driverDoorPivot.rotation.y=doorAngle;
+      capAngle+=(capTarget-capAngle)*t;
+      fuelCapPivot.rotation.y=capAngle;
     },
     getTravel(){return accumulatedDistance;}
   };
@@ -307,6 +327,7 @@ export function createDistrict({world,scene,lowPower=false}){
       const model=createVehicle(random(paintChoices),variant);
       model.position.set(at.x,.18,at.z);
       model.rotation.y=at.heading;
+      model.userData.setLights(night);
       model.visible=true;district.add(model);
       traffic.push({model,route,distance,velocity:initial?1+Math.random()*1.8:0,
         cruise:2.9+Math.random()*2.0,offset:Math.random()*6,variant});
@@ -342,10 +363,15 @@ export function createDistrict({world,scene,lowPower=false}){
     const torso=cube(.37,.63,.26,0,1.08,0,jacket,g);
     const head=new THREE.Mesh(new THREE.SphereGeometry(.20,8,6),surface('#bd8d73'));
     head.position.y=1.55;g.add(head);
-    const legs=[];
-    for(const sx of [-.12,.12])legs.push(cube(.12,.55,.16,sx,.40,0,dark,g));
+    const legs=[],arms=[];
+    for(const sx of [-.12,.12]){
+      const legPivot=new THREE.Group();legPivot.position.set(sx,.61,0);g.add(legPivot);
+      cube(.12,.55,.16,0,-.20,0,dark,legPivot);legs.push(legPivot);
+      const armPivot=new THREE.Group();armPivot.position.set(Math.sign(sx)*.24,1.36,0);g.add(armPivot);
+      cube(.105,.47,.14,0,-.23,0,jacket,armPivot);arms.push(armPivot);
+    }
     g.position.set(x,0,19.4);
-    district.add(g);walking.push({group:g,legs,base:x,offset:i*2.6});
+    district.add(g);walking.push({group:g,legs,arms,base:x,offset:i*2.6});
   }
   function update(time,delta){
     const sec=time/1000,dt=Math.max(0,Math.min(.08,delta));
@@ -391,6 +417,7 @@ export function createDistrict({world,scene,lowPower=false}){
       car.model.userData.spinWheels(moved);
       car.model.userData.setBraking(desired<car.cruise*.23);
       car.model.userData.setTurnSignal(position.turning,Math.floor(sec*3)%2===0);
+      car.model.userData.animateBody(dt);
       if(car.distance>=car.route.length-.15){
         disposeVehicle(car.model);
         traffic.splice(i,1);
@@ -405,11 +432,17 @@ export function createDistrict({world,scene,lowPower=false}){
     for(const cloud of clouds)cloud.group.position.x=cloud.base+Math.sin(sec*cloud.speed)*3;
     for(const p of walking){
       p.group.position.x=p.base+Math.sin(sec*.21+p.offset)*1.4;
-      p.legs[0].rotation.x=Math.sin(sec*2.6+p.offset)*.24;
-      p.legs[1].rotation.x=-p.legs[0].rotation.x;
+      const gait=Math.sin(sec*2.6+p.offset);
+      p.legs[0].rotation.x=gait*.28;p.legs[1].rotation.x=-gait*.28;
+      p.arms[0].rotation.x=-gait*.22;p.arms[1].rotation.x=gait*.22;
+      p.group.rotation.y=Math.cos(sec*.21+p.offset)<0?Math.PI:0;
     }
   }
-  function setNight(active){night=!!active;for(const li of blinkers)li.intensity=night?2.2:0;}
+  function setNight(active){
+    night=!!active;
+    for(const li of blinkers)li.intensity=night?2.2:0;
+    for(const car of traffic)car.model.userData.setLights(night);
+  }
   return {update,setNight,district,setTrafficDensity,
     trafficCount:()=>traffic.length,
     routeCount:()=>routes.length,

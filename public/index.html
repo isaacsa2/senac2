@@ -7,13 +7,15 @@
   <meta name="description" content="EcoPosto 3D: explore um posto de combustíveis em 3D, descubra produtos reais e pratique um caixa de treinamento sem pagamentos de verdade.">
   <title>EcoPosto 3D — Explore, aprenda e simule</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=traffic-v6">
+  <link rel="stylesheet" href="./styles.css?v=realism-v7">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"}}</script>
-  <script src="./sim-core.js?v=traffic-v6" defer></script>
+  <script src="./operations-core.js?v=realism-v7" defer></script>
+  <script src="./sim-core.js?v=realism-v7" defer></script>
   <script src="./catalog-extra.js" defer></script>
-  <script src="./app.js?v=traffic-v6" defer></script>
-  <script type="module" src="./scene.js?v=traffic-v6"></script>
-  <script type="module" src="./game.js?v=traffic-v6"></script>
+  <script src="./app.js?v=realism-v7" defer></script>
+  <script src="./operations-ui.js?v=realism-v7" defer></script>
+  <script type="module" src="./scene.js?v=realism-v7"></script>
+  <script type="module" src="./game.js?v=realism-v7"></script>
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true">
@@ -60,6 +62,7 @@
           </div>
           <div class="game-hud" id="game-hud" hidden aria-live="polite">
             <div class="game-hud-top"><span class="game-pill">● MODO FRENTISTA</span><span class="game-progress" id="game-progress">Missão: atender o primeiro veículo</span>
+              <button type="button" class="game-exit" id="open-operations-game" title="Estoque, vendas e tarefas do turno">Operações</button>
               <button type="button" class="game-exit" id="exit-game">Sair do jogo</button>
             </div>
             <div class="customer-hud" id="customer-hud">
@@ -78,7 +81,9 @@
         <div class="scene-toolbar">
           <div class="camera-buttons" role="group" aria-label="Ângulo da câmera"><button class="camera-btn is-active" data-view="geral" type="button">Vista geral</button><button class="camera-btn" data-view="bombas" type="button">Bombas</button><button class="camera-btn" data-view="loja" type="button">Loja</button><button class="camera-btn" data-view="servicos" type="button">Troca de óleo</button><button class="camera-btn" data-view="bairro" type="button">Bairro</button></div>
           <div class="scene-tools">
-            <label class="graphics-label" for="traffic-density">Trânsito <select id="traffic-density" aria-label="Quantidade de veículos no bairro"><option value="baixo">Leve</option><option value="normal" selected>Normal</option><option value="intenso">Intenso</option></select></label><span id="traffic-count" class="traffic-count" aria-live="polite">Trânsito dinâmico</span><label class="graphics-label" for="graphics-quality">Gráficos <select id="graphics-quality" aria-label="Qualidade gráfica"><option value="auto">Automático</option><option value="alto">Mais detalhes</option><option value="economico">Econômico</option></select></label>
+            <label class="graphics-label" for="traffic-density">Trânsito <select id="traffic-density" aria-label="Quantidade de veículos no bairro"><option value="baixo">Leve</option><option value="normal" selected>Normal</option><option value="intenso">Intenso</option></select></label><span id="traffic-count" class="traffic-count" aria-live="polite">Trânsito dinâmico</span><label class="graphics-label" for="weather-mode">Clima <select id="weather-mode" aria-label="Condição do tempo"><option value="limpo">Ensolarado</option><option value="nublado">Nublado</option><option value="chuva">Chuva</option></select></label>
+            <button type="button" class="scene-ops-button" id="open-operations-toolbar">Operação do posto</button>
+            <label class="graphics-label" for="graphics-quality">Gráficos <select id="graphics-quality" aria-label="Qualidade gráfica"><option value="auto">Automático</option><option value="alto">Mais detalhes</option><option value="economico">Econômico</option></select></label>
             <button class="toolbar-link" id="reset-camera" type="button" title="Voltar para a vista geral">↺ Reiniciar</button>
             <button class="fullscreen-button" id="fullscreen-scene" type="button" aria-pressed="false" aria-label="Abrir posto em tela cheia">⛶ Tela cheia</button>
           </div>
@@ -118,10 +123,30 @@
   <dialog id="fuel-dialog" class="modal fuel-dialog" aria-labelledby="fuel-dialog-title"><div class="modal-inner">
     <button type="button" class="icon-button modal-close" id="fuel-close" aria-label="Fechar abastecimento"><svg><use href="#i-x"></use></svg></button>
     <span class="section-kicker">POSTO ESCOLA · TREINAMENTO</span><h2 id="fuel-dialog-title">Abastecimento simulado</h2>
-    <p>Selecione o veículo e a meta de litros. O visor da bomba acompanha o abastecimento em tempo real. Nenhum combustível real é fornecido.</p>
+    <p>Realize o procedimento completo: identifique o produto, desligue o motor, encaixe o bico, configure a meta, abasteça e retire o bico. Tudo é uma simulação segura.</p>
     <div class="fuel-row"><label>Combustível selecionado<strong id="fuel-product-name">—</strong></label><div class="fuel-unit-price" id="fuel-unit-price">R$ 0,00 / L</div></div>
-    <div class="fuel-form"><label for="fuel-vehicle">Tipo de veículo</label><select id="fuel-vehicle"><option value="flex">Carro flex / gasolina</option><option value="diesel">Diesel moderno (exige S10)</option><option value="diesel-antigo">Diesel antigo compatível com S500</option></select>
-      <label for="fuel-target">Quantidade desejada (L)</label><input id="fuel-target" type="number" min="1" max="80" step="1" value="20" inputmode="numeric"></div>
+    <div class="fuel-form">
+      <label for="fuel-vehicle">Tipo de veículo</label>
+      <select id="fuel-vehicle"><option value="flex">Carro flex / gasolina</option><option value="diesel">Diesel moderno (exige S10)</option><option value="diesel-antigo">Diesel antigo compatível com S500</option></select>
+      <label for="fuel-mode">Modo de abastecimento</label>
+      <select id="fuel-mode"><option value="litros">Quantidade em litros</option><option value="valor">Valor em R$</option><option value="completar">Completar tanque</option></select>
+      <div class="fuel-mode-field" id="fuel-litres-field"><label for="fuel-target">Quantidade desejada (L)</label>
+        <input id="fuel-target" type="number" min=".1" max="80" step=".1" value="20" inputmode="decimal"></div>
+      <div class="fuel-mode-field" id="fuel-value-field" hidden><label for="fuel-value-target">Valor solicitado (R$)</label>
+        <input id="fuel-value-target" type="number" min="1" max="10000" step=".01" value="50.00" inputmode="decimal"></div>
+      <div class="fuel-mode-field"><label for="fuel-speed">Velocidade do treinamento</label>
+        <select id="fuel-speed"><option value="1">1× ritmo de bomba simulada</option><option value="3" selected>3× treinamento normal</option><option value="6">6× treinamento rápido</option></select></div>
+      </div>
+    <div class="fuel-status-panel" id="fuel-status-panel" aria-live="polite">
+      <div><span>Tanque do veículo</span><strong id="fuel-tank-status">Aguardando veículo</strong></div>
+      <div><span>Estoque subterrâneo</span><strong id="fuel-stock-status">Verificando...</strong></div>
+      <div><span>Projeção do abastecimento</span><strong id="fuel-projection">—</strong></div>
+    </div>
+    <div class="fuel-safety" role="group" aria-label="Procedimentos de segurança do abastecimento">
+      <label class="fuel-check"><input id="fuel-engine-off" type="checkbox"><span>Motor desligado e veículo imobilizado</span></label>
+      <button id="fuel-connect" class="fuel-nozzle-button" type="button" aria-pressed="false">Encaixar bico no tanque</button>
+      <p id="fuel-safety-status" role="status">Procedimento não iniciado · verifique o motor e conecte o bico.</p>
+    </div>
     <div class="fuel-meter" aria-live="off"><span>ABASTECENDO...</span><div><strong id="fuel-litres">0,0 L</strong><strong id="fuel-amount">R$ 0,00</strong></div><div class="fuel-meter-track"><span id="fuel-progress-bar"></span></div></div>
     <p class="fuel-error" id="fuel-error" role="alert"></p>
     <div class="fuel-actions"><button type="button" class="button button-primary" id="fuel-start">Iniciar abastecimento</button><button type="button" class="button button-outline" id="fuel-pause" disabled>Pausar</button><button type="button" class="button button-dark" id="fuel-finish" disabled>Finalizar e registrar no PDV</button></div>
@@ -223,6 +248,54 @@
       <p id="payment-error" class="form-error" role="alert"></p>
       <button id="finish-sale" type="button" class="button button-primary button-full" disabled>Concluir venda de treinamento <svg><use href="#i-check"></use></svg></button>
       <p class="pay-legal">SIMULAÇÃO EDUCACIONAL · NÃO É MAQUININHA OU QR PIX FUNCIONAL · NÃO EMITE DOCUMENTO FISCAL.</p>
+    </div>
+  </dialog>
+  <dialog id="operations-dialog" class="modal operations-dialog" aria-labelledby="ops-title">
+    <div class="operations-shell">
+      <header class="operations-head">
+        <div><span>GESTÃO DE POSTO · TREINAMENTO</span><h2 id="ops-title">Painel de operação</h2>
+          <p>Estoque, desempenho e rotina do turno, salvos somente neste navegador.</p></div>
+        <button id="close-operations" type="button" aria-label="Fechar painel de operações">✕</button>
+      </header>
+      <div class="operations-tabs">
+        <div class="operations-kpis">
+          <article><small>TURNO</small><strong id="ops-shift-number">01</strong></article>
+          <article><small>VENDAS</small><strong id="ops-sales">0</strong></article>
+          <article><small>COMBUSTÍVEL</small><strong id="ops-litres">0 L</strong></article>
+          <article><small>FATURAMENTO FICTÍCIO</small><strong id="ops-revenue">R$ 0,00</strong></article>
+          <article><small>SATISFAÇÃO</small><strong id="ops-rating">—</strong></article>
+        </div>
+        <div class="operations-layout">
+          <section>
+            <h3>Tanques subterrâneos <small>volumes fictícios</small></h3>
+            <p>Os tanques começam parcialmente abastecidos. Cada atendimento reduz o estoque; a entrega permite repor dentro da capacidade.</p>
+            <div class="ops-tank-list" id="ops-tanks"></div>
+            <h3 class="ops-retail-title">Conveniência e lubrificantes <small>estoque unitário</small></h3>
+            <div class="ops-retail-preview" id="ops-retail-preview"></div>
+          </section>
+          <aside class="ops-control">
+            <h3>Recebimento de caminhão-tanque</h3>
+            <label for="ops-fuel-select">Combustível</label><select id="ops-fuel-select"></select>
+            <label for="ops-delivery-litres">Volume da entrega (L)</label><input id="ops-delivery-litres" type="number" step="100" min="100" max="20000" value="1000" inputmode="numeric">
+            <button id="ops-deliver" type="button">Registrar entrega simulada</button>
+            <p class="ops-feedback" id="ops-delivery-feedback" role="status"></p>
+            <h3>Entrega de mercadorias</h3>
+            <label for="ops-retail-select">Produto físico</label><select id="ops-retail-select"></select>
+            <label for="ops-retail-qty">Quantidade de unidades</label><input id="ops-retail-qty" type="number" min="1" max="200" step="1" value="12">
+            <button type="button" id="ops-retail-add">Dar entrada nas mercadorias</button>
+            <p class="ops-feedback" id="ops-retail-feedback" role="status"></p>
+            <h3>Fechamento de caixa</h3>
+            <p id="ops-methods">Formas de pagamento —</p>
+            <button id="ops-close-shift" type="button" class="ops-secondary">Encerrar turno e gerar resumo</button>
+            <details><summary>Reiniciar ambiente de treinamento</summary>
+              <p>Apaga apenas o estoque e o histórico desta simulação de operações. As vendas a prazo do outro painel não são apagadas.</p>
+              <button id="ops-reset" type="button" class="ops-danger">Reiniciar operação</button>
+            </details>
+          </aside>
+        </div>
+      </div>
+      <section class="operations-log"><h3>Ocorrências do turno</h3><div id="ops-events" aria-live="polite"></div></section>
+      <footer>Valores fictícios · não é controle fiscal, técnico ou ambiental certificado</footer>
     </div>
   </dialog>
   <dialog id="receipt-dialog" class="modal receipt-modal"><div class="modal-inner"><button class="icon-button modal-close" type="button" data-close-dialog aria-label="Fechar"><svg><use href="#i-x"></use></svg></button><div id="receipt-content"></div><button id="print-receipt" class="button button-dark button-full" type="button">Imprimir comprovante</button></div></dialog>

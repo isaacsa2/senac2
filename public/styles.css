@@ -552,3 +552,89 @@ body.scene-fullscreen-open{overflow:hidden}
 .scene-card:fullscreen .traffic-count,.scene-card.fullscreen-fallback .traffic-count{background:#244b3e;color:#def4e0;border-color:#5e7865}
 @media(max-width:770px){.scene-tools{justify-content:flex-start}.traffic-count{font-size:9px;padding:6px 8px}}
 @media(max-width:480px){.traffic-count{display:none}.camera-buttons{flex-wrap:wrap}.camera-btn{padding:8px 9px;font-size:10px}}
+
+
+/* V7 realismo operacional: controles, relatórios e segurança */
+.scene-ops-button{border:1px solid #b5d6c5;border-radius:9px;background:#f7fff8;color:#275b44;padding:8px 12px;font-size:11px;font-weight:900;white-space:nowrap;min-height:38px}
+.scene-ops-button:hover,.scene-ops-button:focus-visible{background:#dcefdc}
+.fuel-form{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px 14px;align-items:end}
+.fuel-form>label{align-self:end}
+.fuel-form>select{align-self:stretch}
+.fuel-mode-field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.fuel-mode-field[hidden]{display:none}
+.fuel-mode-field label{font-size:11px;font-weight:900;color:#3a6651}
+.fuel-mode-field input,.fuel-mode-field select{border:1px solid #bfd9c4;border-radius:9px;padding:11px;color:#16432c;background:white;width:100%;min-height:41px}
+.fuel-status-panel{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:15px 0}
+.fuel-status-panel>div{background:#e8f1e8;border-radius:10px;padding:10px;min-width:0}
+.fuel-status-panel span{display:block;color:#66826a;text-transform:uppercase;font-size:9px;letter-spacing:.3px;font-weight:900}
+.fuel-status-panel strong{display:block;color:#28533d;font-size:12px;margin-top:6px;line-height:1.4}
+.fuel-safety{background:#f7f7ef;border:1px solid #dcdaca;border-radius:13px;padding:13px;margin:10px 0 14px}
+.fuel-check{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:800;color:#365044}
+.fuel-check input{accent-color:#397b4a;width:18px;height:18px;flex-shrink:0}
+.fuel-nozzle-button{display:block;width:100%;border:1px solid #8bb599;border-radius:8px;background:#e3f3e5;color:#275e43;padding:10px;font-size:12px;font-weight:900;margin-top:11px}
+.fuel-nozzle-button.is-connected{background:#245f48;color:#fff}
+.fuel-nozzle-button:disabled{opacity:.53;cursor:not-allowed}
+.fuel-safety p{font-size:11px;color:#657868;margin:10px 0 0}
+.operations-dialog{width:min(1080px,calc(100vw - 16px));border:0;border-radius:16px;padding:0;max-height:91dvh}
+.operations-shell{max-height:91dvh;overflow:auto;background:#f4f8f5;color:#203f32}
+.operations-head{background:linear-gradient(115deg,#173d30,#305d45);color:white;padding:22px 25px;display:flex;align-items:flex-start;justify-content:space-between;gap:15px}
+.operations-head span{font-size:10px;font-weight:900;letter-spacing:1.8px;color:#b2e0b6}
+.operations-head h2{font:900 27px Manrope,sans-serif;margin:6px 0}
+.operations-head p{font-size:12px;color:#d1e7d3;margin:0}
+.operations-head button{border:0;border-radius:8px;background:#ffffff24;color:#fff;font-size:19px;padding:7px 11px;cursor:pointer}
+.operations-tabs{padding:20px 24px}
+.operations-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px}
+.operations-kpis article{border:1px solid #d4e4d6;background:#fff;border-radius:11px;padding:13px;min-width:0}
+.operations-kpis small{font-size:9px;color:#738c77;font-weight:900;letter-spacing:.6px;display:block}
+.operations-kpis strong{font-size:20px;font-family:Manrope,sans-serif;font-weight:900;color:#24583c;display:block;margin-top:8px;white-space:nowrap}
+.operations-layout{display:grid;grid-template-columns:minmax(0,1fr) 270px;gap:18px;margin-top:21px}
+.operations-layout h3,.operations-log h3{font-size:15px;color:#24523a;margin:0 0 10px;font-weight:900}
+.operations-layout h3 small{font-size:10px;color:#78947e}
+.operations-layout section>p,.ops-control>p{font-size:11px;color:#6d8775;line-height:1.5;margin:0 0 13px}
+.ops-tank-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.ops-tank{background:#fff;border:1px solid #d5e5d8;border-radius:10px;padding:13px}
+.ops-tank>div:first-child{display:flex;align-items:center;justify-content:space-between;gap:5px}
+.ops-tank strong{font-size:11px}
+.ops-tank small{font-size:10px;color:#6b8c79}
+.ops-tank-track{margin:11px 0 8px;height:9px;background:#e8efe9;border-radius:50px;overflow:hidden}
+.ops-tank-track>span{display:block;height:100%;border-radius:50px;background:linear-gradient(90deg,#65a777,#2f7455)}
+.ops-tank.is-low{border-color:#e5c07d;background:#fffaf2}
+.ops-tank.is-low .ops-tank-track>span{background:#d5a951}
+.ops-control{background:#e6f0e7;border:1px solid #cddfce;border-radius:12px;padding:15px}
+.ops-control h3:not(:first-child){margin-top:20px}
+.ops-control label{font-size:11px;font-weight:900;display:block;margin-bottom:5px}
+.ops-control input,.ops-control select{width:100%;border:1px solid #bad1bd;border-radius:8px;padding:10px;margin-bottom:12px;background:#fff;min-height:40px;color:#294d3d}
+.ops-control button{background:#276748;color:#fff;border:0;border-radius:8px;padding:11px;width:100%;font-size:11px;font-weight:900}
+.ops-control button.ops-secondary{background:#3f5f69}
+.ops-control button.ops-danger{background:#a44d42;margin-top:10px}
+.ops-control details{margin-top:13px;padding-top:12px;border-top:1px solid #c2d7c5}
+.ops-control summary{font-size:10px;font-weight:800;cursor:pointer}
+.ops-control details p{font-size:10px;line-height:1.5;color:#678270}
+.ops-feedback{min-height:24px;margin:8px 0!important;font-size:11px!important;font-weight:900!important}
+.operations-log{background:#fff;padding:15px 24px;max-height:220px;overflow:auto;border-top:1px solid #d9e7dd}
+.operations-log article{font-size:11px;color:#516e5c;border-bottom:1px solid #eaf0e9;padding:8px 0;display:flex;gap:10px}
+.operations-log time{font-size:9px;color:#82978c;min-width:96px}
+.operations-log article.is-warning{color:#a3523b}
+.operations-shell footer{font-size:9px;color:#6f8578;text-align:center;padding:14px;background:#edf3ee}
+@media(max-width:760px){
+ .fuel-form{grid-template-columns:1fr}.fuel-status-panel{grid-template-columns:1fr}
+ .operations-tabs{padding:13px}.operations-layout{grid-template-columns:1fr}
+ .operations-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .operations-head{padding:15px}.operations-head h2{font-size:20px}
+ .ops-tank-list{grid-template-columns:1fr 1fr}
+}
+@media(max-width:480px){
+ .operations-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .operations-kpis article:last-child{grid-column:1/-1}
+ .ops-tank-list{grid-template-columns:1fr}.operations-log{padding:13px}
+ .operations-log time{min-width:58px}
+ .scene-ops-button{font-size:10px;padding:7px 8px}
+}
+
+/* Estoque de produtos acabados - leitura acessível em telas pequenas */
+.ops-retail-title{margin-top:20px!important}
+.ops-retail-preview{background:#fff;border:1px solid #d6e7d9;border-radius:9px;max-height:245px;overflow:auto;padding:4px 12px}
+.ops-retail-line{padding:8px 0;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:11px;color:#4a6d55;border-bottom:1px solid #edf2ed}
+.ops-retail-line:last-child{border:0}
+.ops-retail-line strong{font-size:10px;white-space:nowrap;color:#326b48}
+.ops-retail-line.is-low strong{color:#ac643b}

@@ -139,3 +139,39 @@ O terminal fictício inclui cartão por inserção ou aproximação, sucesso/err
 - Configuração de trânsito: **Leve / Normal / Intenso**. No PC, os limites são aproximadamente 6/13/17 veículos; em aparelhos limitados, 4/7/10.
 - Vista **Bairro**, mais cruzamentos com faixas de pedestres, linha de parada, calçadas, estacionamentos, placas de direção e velocidade, paradas de ônibus, lojas e mobiliário urbano. O chão do bairro foi estendido para eliminar o vazio branco.
 - Moeda de 1 centavo **excluída do caixa prático**, permanecendo apenas moedas de R$ 0,05, R$ 0,10, R$ 0,25, R$ 0,50 e R$ 1. Para não exigir troco inviável, o sistema aplica **desconto ao cliente em espécie de 0 a 4 centavos**, deixando o valor de pagamento múltiplo de cinco centavos e registrando o ajuste no comprovante. Cartão, Pix e prazo mantêm o total integral. A moeda de 1 centavo continua válida legalmente, mas deixou de ser produzida em 2004 (Banco Central: https://www.bcb.gov.br/cedulasemoedas/moedasemitidas).
+
+
+## V7 — EcoPosto como simulador operacional de posto brasileiro
+
+### Ciclo do cliente e abastecimento
+1. O carro chega pela entrada do posto, estaciona junto à ilha correta e o cliente desce.
+2. Selecione a ilha física e o bico solicitado. O sistema avisa quando a escolha é incorreta.
+3. Configure a bomba em **litros**, **valor em reais** ou **completar tanque**.
+4. Confira a capacidade livre do veículo e o saldo do estoque subterrâneo didático.
+5. Marque motor desligado, encaixe o bico e inicie a operação. A mangueira aparece no mundo 3D conectada à tampa do veículo.
+6. Ritmo do treinamento: 1× (vazão de referência didática), 3× (padrão) e 6× (rápido). Pausa, retomada e finalização parcial estão disponíveis.
+7. Pare a bomba, retire o bico e registre os litros no PDV. Litros já abastecidos não podem ser manualmente alterados no caixa durante o modo frentista.
+8. Receba pelo meio fictício escolhido. Somente após o pagamento registre a liberação do veículo; o cliente entra no carro e ele sai animadamente.
+
+### Administração de estoque e turno
+- O botão **Operação do posto** abre controle dos seis tanques de combustível, saldo, capacidade e alerta de reposição.
+- A entrega de caminhão-tanque é simulada, valida a capacidade máxima e guarda o histórico apenas neste navegador.
+- Produtos físicos de conveniência e lubrificantes têm estoque unitário por SKU; o caixa rejeita venda acima do saldo e a baixa acontece após a venda fictícia. Serviços não têm limite de estoque.
+- O fechamento de turno registra litros, vendas, faturamento fictício por dinheiro, Pix, cartão e prazo, ocorrências e satisfação do atendimento.
+- Os dados são armazenados localmente no navegador. Não há sincronização multiusuário, integração fiscal, bancária ou medição certificada.
+
+### Cenário visual e dispositivos
+- Porta do cliente e tampa de combustível animadas; personagem e cliente têm movimento de braços e pernas.
+- Clima ensolarado, nublado e chuvoso. Na chuva há partículas leves, névoa e alteração visual do asfalto; o modo noite liga os faróis e altera a iluminação.
+- Tráfego nas 12 rotas, opções de densidade, carros e micro-ônibus aleatórios, semáforos, painel 3D e interior transitável.
+- O cenário é geométrico/estilizado com qualidade escalável, para continuar utilizável em mobile e computadores modestos.
+
+### O que é e não é fiel à realidade
+- A Resolução ANP nº 948/2023 determina **duas casas decimais** no preço por litro no painel e nas bombas (art. 22): https://www.gov.br/anp/pt-br/acesso-a-informacao/perguntas-frequentes/precos-e-defesa-da-concorrencia/precos .
+- Combustíveis, procedimentos, denominações, estoque e formas de venda usam conceitos do varejo brasileiro, mas **preços, vazões, capacidades, veículos, funcionários e documentos são de treinamento**.
+- Os limites de tanque e fluxo são parâmetros didáticos; não representam a medição calibrada de uma bomba real. Não é curso de segurança operacional certificado nem comprovação de conformidade regulatória, técnica ou ambiental.
+- O caixa prático usa moedas de 5, 10, 25, 50 centavos e 1 real. A moeda de 1 centavo, embora tenha validade legal, não é utilizada no exercício: o pagamento em espécie aplica desconto favorável de até quatro centavos.
+- Nenhuma transação Pix/cartão é real, e o comprovante declara que não tem valor fiscal. Não digite dados bancários reais.
+
+### Testes
+O CI executa testes unitários de regras e regressões e um teste de interface com Chromium headless (WebGL, movimentação, estoque, clima e pagamento simulado). Se o navegador falhar, um screenshot é anexado aos artefatos do workflow.

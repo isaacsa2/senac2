@@ -273,3 +273,117 @@ test('more vehicles, configurable traffic and upgraded city map',()=>{
  assert.match(game,/createCustomer\(serial,Math\.floor\(Math\.random\(\)\*6\)\)/);
  assert.match(game,/function animateCustomer/);
 });
+
+
+test('V7 realistic station: quantity/value/full tank and stock accounting',()=>{
+  const code=read('public/operations-core.js');
+  const storage=new Map();
+  const ctx={window:{},Date,Math,localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)}};
+  runInNewContext(code,ctx);
+  const ops=ctx.window.ECO_OPERATIONS;
+  assert.equal(ops.FUEL_IDS.length,6);
+  assert.equal(ops.tank('gasolina-comum').litres,10500);
+  const arg={fuelId:'gasolina-comum',unitPriceCents:625,tankFreeDeci:440};
+  const byLitres=ops.planFill({...arg,mode:'litros',requestLitres:22.5});
+  assert.equal(byLitres.ok,true);assert.equal(byLitres.deci,225);
+  assert.equal(byLitres.totalCents,14063);
+  const byMoney=ops.planFill({...arg,mode:'valor',requestCents:5000});
+  assert.equal(byMoney.ok,true);assert.equal(byMoney.deci,80);assert.equal(byMoney.totalCents,5000);
+  assert.equal(ops.planFill({...arg,mode:'completar'}).deci,440);
+  assert.equal(ops.planFill({...arg,mode:'litros',requestLitres:45}).ok,false);
+  assert.equal(ops.planFill({...arg,mode:'litros',requestLitres:1.25}).ok,false);
+  assert.equal(ops.planFill({...arg,mode:'incorrect'}).ok,false);
+  const before=ops.tank('gasolina-comum').deci;
+  const receipt=ops.dispense('gasolina-comum',225,625);
+  assert.equal(receipt.ok,true);assert.equal(receipt.amountCents,14063);
+  assert.equal(ops.tank('gasolina-comum').deci,before-225);
+  assert.equal(ops.dispense('gasolina-comum',999999,625).ok,false);
+  assert.equal(ops.restock('gasolina-comum',9000).ok,false);
+  assert.equal(ops.restock('gasolina-comum',500).ok,true);
+  const ctx2={window:{},Date,Math,localStorage:ctx.localStorage};
+  runInNewContext(code,ctx2);
+  assert.equal(ctx2.window.ECO_OPERATIONS.tank('gasolina-comum').deci,before-225+5000);
+});
+test('V7 realistic station: payment reconciliation, customer experience and shift closure',()=>{
+  const store=new Map(),ctx={window:{},Date,Math,
+    localStorage:{getItem:key=>store.get(key)||null,setItem:(key,val)=>store.set(key,val)}};
+  runInNewContext(read('public/operations-core.js'),ctx);
+  const ops=ctx.window.ECO_OPERATIONS;
+  for(const [method,amount] of [['pix',5000],['cartao',2000],['dinheiro',4500],['prazo',1000]]){
+    assert.equal(ops.sale({method,amountCents:amount}),true);
+  }
+  assert.equal(ops.sale({method:'pix',amountCents:-1}),false);
+  assert.equal(ops.customer({satisfaction:90,waitingSeconds:45}),90);
+  ops.warning('Bico incorreto no exercício');
+  const m=ops.snapshot().metrics;
+  assert.equal(m.sales,4);assert.equal(m.revenueCents,12500);
+  assert.equal(m.cashCents,4500);assert.equal(m.pixCents,5000);
+  assert.equal(m.cardCents,2000);assert.equal(m.creditCents,1000);
+  assert.equal(m.cars,1);assert.equal(m.warnings,1);
+  const closed=ops.closeShift();
+  assert.equal(closed.metrics.sales,4);
+  assert.equal(ops.snapshot().metrics.sales,0);
+  assert.equal(ops.snapshot().history.length,1);
+});
+test('V7 realistic station: refill checklist, weather, inventory and UI dependencies',()=>{
+  const html=read('public/index.html'),app=read('public/app.js');
+  const scene=read('public/scene.js'),game=read('public/game.js');
+  for(const id of ['fuel-mode','fuel-value-target','fuel-speed','fuel-engine-off','fuel-connect',
+    'fuel-stock-status','fuel-projection','operations-dialog','ops-tanks','ops-deliver',
+    'ops-close-shift','open-operations-toolbar','weather-mode']){
+    assert.match(html,new RegExp('id="'+id+'"'),id);
+  }
+  assert.match(html,/src="\.\/operations-core\.js\?v=realism-v7"/);
+  assert.match(html,/src="\.\/operations-ui\.js\?v=realism-v7"/);
+  assert.match(scene,/function setHose\(/);
+  assert.match(scene,/function setWeather\(/);
+  assert.match(scene,/function moveRain\(/);
+  assert.match(game,/function chosenPlan\(/);
+  assert.match(game,/function toggleNozzle\(/);
+  assert.match(game,/function startFilling\(/);
+  assert.match(game,/function commitFuel\(/);
+  assert.match(game,/ops\?\.dispense\(/);
+  assert.match(game,/ecoposto:customer-released/);
+  assert.match(app,/function updateWeather\(/);
+  assert.match(app,/litres<\.1/);
+  assert.doesNotThrow(()=>new Script(read('public/operations-core.js')));
+  assert.doesNotThrow(()=>new Script(read('public/operations-ui.js')));
+});
+
+
+test('V7 convenience stock and replenishment persist and prevent overselling',()=>{
+ const store=new Map(),ctx={window:{},Date,Math,
+   localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)}};
+ const source=read('public/operations-core.js');
+ runInNewContext(source,ctx);
+ const ops=ctx.window.ECO_OPERATIONS;
+ const item={id:'coca',category:'conveniencia',qty:4};
+ assert.equal(ops.retailCount(item),32);
+ assert.equal(ops.validateRetail([item]).ok,true);
+ assert.equal(ops.consumeRetail([item]).ok,true);
+ assert.equal(ops.retailCount(item),28);
+ assert.equal(ops.validateRetail([{...item,qty:29}]).ok,false);
+ assert.equal(ops.restockRetail({id:'coca',category:'conveniencia',qty:12}).ok,true);
+ assert.equal(ops.retailCount(item),40);
+ assert.equal(ops.consumeRetail([{id:'troca-oleo',category:'servicos',qty:1}]).ok,true);
+ assert.equal(ops.retailCount({id:'troca-oleo',category:'servicos'}),Infinity);
+ const next={window:{},Date,Math,localStorage:ctx.localStorage};
+ runInNewContext(source,next);
+ assert.equal(next.window.ECO_OPERATIONS.retailCount(item),40);
+ assert.equal(next.window.ECO_OPERATIONS.retailCount({id:'oleo',category:'cuidados'}),18);
+});
+test('V7 physical pump and NPC have consistent UI and game invariants',()=>{
+ const app=read('public/app.js'),world=read('public/world-extra.js');
+ assert.match(app,/No modo frentista, lance o combustível somente pela bomba/);
+ assert.match(app,/Litros do veículo vêm do visor da bomba/);
+ assert.match(app,/Volume registrado pela bomba não pode ser editado/);
+ assert.match(app,/validateRetail/);
+ assert.match(app,/consumeRetail/);
+ assert.match(world,/setFuelCap\(/);
+ assert.match(world,/setDoor\(/);
+ assert.match(world,/setLights\(/);
+ assert.match(game,/function makeNPC\(/);
+ assert.match(game,/function updateNPC\(/);
+ assert.match(game,/function animateAttendant\(/);
+ assert.match(game,/state='boarding'/);
+});

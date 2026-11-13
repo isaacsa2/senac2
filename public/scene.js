@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createDistrict } from './world-extra.js?v=traffic-v6';
+import { createDistrict } from './world-extra.js?v=realism-v7';
 
 // Posto-escola 3D com materiais físicos, texturas procedurais e detalhes de pista leves.
 // Mantém as posições originais das bombas e os eventos usados pelo PDV.
@@ -35,6 +35,11 @@ function makeLabel(text, foreground='#fff', background=null, fontSize=66) {
 let renderer, camera, controls, world, scene, renderQueued=false, activeCamera=null, daylight, sunLight;
 let lamps=[],qualityMode='auto',cameraObstacles=[],district=null,shopDoors=[];
 let ambientLast=0,ambientId=0,ambientVisible=true;
+let weather='limpo',isNight=false,asphaltMaterial=null,concreteMaterial=null;
+let hoseGroup=null,rainDrops=null,rainArray=null,rainSpeed=[];
+const PUMP_HOSE_COLORS={'gasolina-comum':'#4daa67','gasolina-nitro':'#da785b',
+  'gasolina-racing':'#bc3945','etanol-comum':'#dcad4b','diesel-s10':'#4898cb','diesel-s500':'#638296'};
+
 let anchors=[];
 function buildScene(){
   scene=new THREE.Scene();
@@ -72,6 +77,7 @@ function buildScene(){
     return new THREE.MeshStandardMaterial({map:texture,roughness:.96,metalness:0});
   }
   const concreteSurface=pavedMaterial('#e0dfd5','concrete'),asphaltSurface=pavedMaterial('#485653','asphalt');
+  concreteMaterial=concreteSurface;asphaltMaterial=asphaltSurface;
   function box(w,h,d,x,y,z,material,parent=world){
     const mesh=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),typeof material==='string'?color(material):material);
     mesh.position.set(x,y,z);
@@ -498,6 +504,73 @@ try{
   controls.addEventListener('change',queueDraw);
   // Orientação sensível ao toque; preserva o controle por arrasto no modo observação.
   buildScene();
+  function disposeHose(){
+    if(!hoseGroup)return;
+    world.remove(hoseGroup);
+    hoseGroup.traverse(obj=>{if(obj.isMesh){obj.geometry?.dispose?.();obj.material?.dispose?.();}});
+    hoseGroup=null;
+  }
+  function setHose(data){
+    disposeHose();
+    if(!data?.attached||!data.vehicle||!data.pump)return;
+    const car=data.vehicle;
+    const cap=car.userData?.fuelCap;
+    if(!cap)return;
+    car.updateWorldMatrix(true,true);
+    const end=cap.getWorldPosition(new THREE.Vector3());
+    const start=new THREE.Vector3(data.pump.x+.31,1.12,data.pump.z+.44);
+    const middle=start.clone().lerp(end,.55);
+    middle.y=Math.min(start.y,end.y)-.64;
+    const points=[start,start.clone().lerp(middle,.48).add(new THREE.Vector3(.08,-.34,.03)),
+      middle,middle.clone().lerp(end,.55).add(new THREE.Vector3(-.10,-.24,.06)),end];
+    const hoseMat=new THREE.MeshStandardMaterial({color:'#1d302a',roughness:.89,metalness:.05});
+    const curve=new THREE.CatmullRomCurve3(points);
+    hoseGroup=new THREE.Group();hoseGroup.name='mangueira-de-abastecimento';
+    const rubber=new THREE.Mesh(new THREE.TubeGeometry(curve,20,.027,6,false),hoseMat);
+    hoseGroup.add(rubber);
+    const gripMat=new THREE.MeshStandardMaterial({color:PUMP_HOSE_COLORS[data.pump.id]||'#3eaa72',roughness:.41,metalness:.22});
+    const grip=new THREE.Mesh(new THREE.CylinderGeometry(.075,.075,.24,9),gripMat);
+    grip.position.copy(end);grip.rotation.x=Math.PI/2;hoseGroup.add(grip);
+    const trigger=new THREE.Mesh(new THREE.BoxGeometry(.12,.11,.07),gripMat.clone());
+    trigger.position.copy(end).add(new THREE.Vector3(.02,-.08,.035));hoseGroup.add(trigger);
+    const indicatorMat=new THREE.MeshBasicMaterial({color:data.flowing?'#8bea73':'#4c6655'});
+    const indicator=new THREE.Mesh(new THREE.SphereGeometry(.045,8,6),indicatorMat);
+    indicator.position.copy(start).add(new THREE.Vector3(0,.25,.10));
+    hoseGroup.add(indicator);
+    world.add(hoseGroup);queueDraw();
+  }
+  function createRain(){
+    const count=lowPower()?95:260;
+    rainArray=new Float32Array(count*6);
+    for(let i=0;i<count;i++){
+      const x=(Math.random()-.5)*49,z=(Math.random()-.5)*37,y=Math.random()*10;
+      rainArray[i*6]=x;rainArray[i*6+1]=y;rainArray[i*6+2]=z;
+      rainArray[i*6+3]=x-.04;rainArray[i*6+4]=y-.33;rainArray[i*6+5]=z+.08;
+      rainSpeed[i]=8+Math.random()*6;
+    }
+    const g=new THREE.BufferGeometry();
+    g.setAttribute('position',new THREE.BufferAttribute(rainArray,3).setUsage(THREE.DynamicDrawUsage));
+    const m=new THREE.LineBasicMaterial({color:'#b2d9eb',transparent:true,opacity:.51,depthWrite:false});
+    rainDrops=new THREE.LineSegments(g,m);rainDrops.visible=false;rainDrops.frustumCulled=false;
+    scene.add(rainDrops);
+  }
+  function moveRain(dt){
+    if(weather!=='chuva'||!rainDrops)return;
+    for(let i=0;i<rainSpeed.length;i++){
+      let y=rainArray[i*6+1]-rainSpeed[i]*dt;
+      if(y<.18){
+        y=9+Math.random()*3;
+        let x=(Math.random()-.5)*49,z=(Math.random()-.5)*37;
+        if(x>-8&&x<2&&z>-4&&z<1)x+=11; // menos gotas sob a cobertura
+        rainArray[i*6]=x;rainArray[i*6+2]=z;
+      }
+      rainArray[i*6+1]=y;
+      rainArray[i*6+3]=rainArray[i*6]-.04;
+      rainArray[i*6+4]=y-.34;rainArray[i*6+5]=rainArray[i*6+2]+.08;
+    }
+    rainDrops.geometry.attributes.position.needsUpdate=true;
+  }
+  createRain();
   resize();controls.update();queueDraw();
   fallback.hidden=true;
   function setQuality(mode='auto'){
@@ -512,17 +585,34 @@ try{
     renderer.shadowMap.needsUpdate=true;
     resize();queueDraw();
   }
-  function setNight(night){
-    daylight.intensity=night?.62:1.45;
-    sunLight.intensity=night?.14:2.15;
-    sunLight.color.set(night?'#9cbde4':'#fff3d6');
-    scene.fog.color.set(night?'#1b3449':'#d9e7df');
-    for(const lamp of lamps)lamp.intensity=night?13:.35;
-    stage.classList.toggle('night-mode',!!night);
-    district?.setNight(!!night);
+  function applyAtmosphere(){
+    const cloudy=weather==='nublado',raining=weather==='chuva';
+    daylight.intensity=isNight?.62:raining?.82:cloudy?1.18:1.45;
+    sunLight.intensity=isNight?.14:raining?.45:cloudy?1.15:2.15;
+    sunLight.color.set(isNight?'#a6c0ee':raining?'#dde8ed':cloudy?'#e9f2f4':'#fff3d6');
+    scene.fog.color.set(isNight?'#21354b':raining?'#b5c6cf':cloudy?'#c7d5d5':'#d9e7df');
+    scene.fog.near=raining?21:cloudy?29:35;
+    scene.fog.far=raining?58:cloudy?66:78;
+    if(asphaltMaterial){
+      asphaltMaterial.color.set(raining?'#a6b7bf':'#ffffff');
+      asphaltMaterial.roughness=raining?.32:.96;
+      asphaltMaterial.metalness=raining?.11:0;
+      asphaltMaterial.needsUpdate=true;
+    }
+    if(concreteMaterial){concreteMaterial.roughness=raining?.55:.96;concreteMaterial.needsUpdate=true;}
+    for(const lamp of lamps)lamp.intensity=isNight?13:raining?1.2:cloudy?.55:.35;
+    if(rainDrops)rainDrops.visible=raining;
+    stage.classList.toggle('night-mode',isNight);
+    stage.classList.toggle('rain-mode',raining);
+    district?.setNight(isNight);
     queueDraw();
   }
-  // Animação ambiente com limite de FPS, pausada quando o painel não está visível.
+  function setNight(night){isNight=!!night;applyAtmosphere();}
+  function setWeather(next){
+    if(!['limpo','nublado','chuva'].includes(next))next='limpo';
+    weather=next;applyAtmosphere();return weather;
+  }
+    // Animação ambiente com limite de FPS, pausada quando o painel não está visível.
   let doorOpening=0,doorTarget=0;
   function animateAmbient(time){
     ambientId=requestAnimationFrame(animateAmbient);
@@ -531,6 +621,7 @@ try{
     const delta=ambientLast?Math.min(.08,(time-ambientLast)/1000):.035;
     ambientLast=time;
     district?.update(time,delta);
+    if(weather==='chuva')moveRain(delta);
     const next=doorOpening+(doorTarget-doorOpening)*Math.min(1,delta*6);
     if(Math.abs(next-doorOpening)>.0001){doorOpening=next;
       for(const door of shopDoors)door.mesh.position.x=door.x+door.dx*doorOpening;
@@ -546,7 +637,7 @@ try{
   setQuality('auto');
   window.ecoScene={
     focus,
-    requestRender:queueDraw,setQuality,setShopOpen,
+    requestRender:queueDraw,setQuality,setShopOpen,setHose,setWeather,getWeather:()=>weather,
     setTrafficDensity:(value)=>district?.setTrafficDensity(value)||{mode:value,count:0,max:0},
     getTrafficStats:()=>district?.diagnostics()||{cars:0,max:0,spawned:0,signals:null},
     getContext:()=>({THREE,scene,world,renderer,overviewCamera:camera,controls,stage,anchors,cameraObstacles,requestRender:queueDraw}),
