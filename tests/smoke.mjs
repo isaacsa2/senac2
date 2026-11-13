@@ -112,12 +112,19 @@ test('Brazilian cash, card failure simulation, credit ledger',()=>{
  const store=new Map(),scope={window:{},Date,Math,localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v)}};
  runInNewContext(read('public/sim-core.js'),scope);
  const sim=scope.window.ECO_SIM;
- assert.equal(sim.DENOMS.length,13);
+ assert.equal(sim.DENOMS.length,12);
  assert.equal(sim.DENOMS.filter(x=>x.kind==='note').length,7);
- assert.equal(sim.DENOMS.filter(x=>x.kind==='coin').length,6);
- for(const cents of [1,7,89,121,2189,10433,19999]){
-   assert.equal(sim.denominationsValue(sim.changeFor(cents)),cents);
+ assert.equal(sim.DENOMS.filter(x=>x.kind==='coin').length,5);
+ for(const cents of [0,1,7,89,121,2189,10433,19999]){
+   const adjusted=sim.cashAdjustment(cents);
+   assert.equal(adjusted.original,cents);
+   assert.equal(adjusted.due+adjusted.discount,cents);
+   assert.equal(adjusted.due%5,0);
+   assert.equal(sim.denominationsValue(sim.changeFor(adjusted.due)),adjusted.due);
+   assert.ok(adjusted.discount>=0&&adjusted.discount<5);
  }
+ assert.equal(sim.DENOMS.some(d=>d.value===1),false);
+ assert.equal(sim.changeFor(7).length,0,'cannot return 1/2-cent coins');
  sim.setConfig({forced:'read_error'});
  assert.equal(sim.machineOutcome().code,'read_error');
  sim.setConfig({forced:'approved'});
@@ -137,7 +144,7 @@ test('Brazilian pump islands, interior and surrounding animation',()=>{
  for(const id of ['nozzle-dialog','nozzle-options','customer-hud','customer-next','customer-release','credit-group','pos-computer','pos-open-payment','machine-scenario','card-operation','cash-denominations']){
    assert.match(html,new RegExp('id="'+id+'"'));
  }
- assert.match(html,/src="\.\/sim-core\.js"/);
+ assert.match(html,/src="\.\/sim-core\.js(?:\?[^\"]+)?"/);
  assert.match(scene,/createDistrict/);assert.match(scene,/shopDoors/);
  assert.match(scene,/setShopOpen/);assert.match(scene,/function animateAmbient/);
  assert.match(game,/function createQueueCar/);
@@ -145,7 +152,7 @@ test('Brazilian pump islands, interior and surrounding animation',()=>{
  assert.match(game,/function selectNozzle/);
  assert.match(game,/function releaseCar/);
  assert.match(game,/ecoposto:sale-complete/);
- for(const token of ['createVehicle','ambientCar','function building','walking','clouds']){
+ for(const token of ['createVehicle','createTrafficCar','function building','walking','clouds']){
    assert.ok(world.includes(token));
  }
 });
@@ -199,4 +206,70 @@ test('regression: customer ID is distinct from fuel SKU, all six cars can find p
   assert.match(game,/if\(!fuel\)/,'unknown fuel must not crash scene start');
   assert.match(game,/animId=requestAnimationFrame\(tick\);\s*if\(!currentCar\)createQueueCar\(\)/,
     'movement loop must start before optional queue generation');
+});
+
+
+test('vehicle wheels use a pivot on Z instead of spinning cylinder X',()=>{
+ const world=read('public/world-extra.js');
+ const game=read('public/game.js');
+ const paths=read('public/traffic-paths.js');
+ assert.match(world,/const pivot=new THREE\.Group\(\)/);
+ assert.match(world,/tire\.rotation\.x=Math\.PI\/2/);
+ assert.match(world,/pivot\.rotation\.z\+=angle/);
+ assert.doesNotMatch(world,/wheel\.rotation\.z-=car\.dir/);
+ assert.match(world,/wheelRotationForTravel\(metres,\.35\)/);
+ assert.match(game,/customer\.group\.userData\.spinWheels\(step\)/);
+ assert.match(world,/car\.model\.userData\.spinWheels\(moved\)/);
+ assert.match(paths,/headingForTravel/);
+ assert.match(paths,/rotateTowards/);
+});
+test('twelve traffic routes stay on the road map including every turn',()=>{
+ const source=read('public/traffic-paths.js').replace(/^export\s+/gm,'');
+ const sandbox={};
+ runInNewContext(source+
+  ';globalThis.ROADS_TEST={buildTrafficRoutes,pointOnRoad,sampleRoute,headingForTravel,rotateTowards,trafficLightPhase,wheelRotationForTravel};',sandbox);
+ const fn=sandbox.ROADS_TEST;
+ const routes=fn.buildTrafficRoutes();
+ assert.equal(routes.length,12);
+ let checked=0;
+ for(const route of routes){
+   assert.ok(route.length>18,'short route '+route.id);
+   assert.ok(route.stops.length>0,'missing stops '+route.id);
+   for(const p of route.samples){
+     assert.ok(fn.pointOnRoad(p.x,p.z),'offroad '+route.id+' at '+p.x+','+p.z);
+     checked++;
+   }
+   const end=fn.sampleRoute(route,route.length);
+   assert.ok(Number.isFinite(end.heading));
+ }
+ assert.ok(checked>1500,'insufficient geometry sample coverage');
+ assert.ok(Math.abs(fn.headingForTravel(0,1)+Math.PI/2)<1e-8);
+ assert.ok(Math.abs(fn.headingForTravel(-1,0))>3.1);
+ assert.equal(fn.wheelRotationForTravel(.35),-1);
+ assert.equal(fn.trafficLightPhase(0),'ew');
+ assert.equal(fn.trafficLightPhase(18),'all-red');
+ assert.equal(fn.trafficLightPhase(25),'ns');
+});
+test('more vehicles, configurable traffic and upgraded city map',()=>{
+ const html=read('public/index.html');
+ const scene=read('public/scene.js');
+ const game=read('public/game.js');
+ const world=read('public/world-extra.js');
+ const app=read('public/app.js');
+ assert.match(html,/id="traffic-density"/);
+ assert.match(html,/data-view="bairro"/);
+ assert.match(scene,/setTrafficDensity:/);
+ assert.match(scene,/bairro:\{position:/);
+ assert.match(app,/function updateDensity\(\)/);
+ assert.match(world,/maxTraffic=lowPower\?7:13/);
+ assert.match(world,/intenso:17/);
+ assert.match(world,/const variants=\['car','car','hatch','suv','pickup','van','bus'\]/);
+ assert.match(world,/function setTrafficDensity/);
+ assert.match(world,/trafficLightPhase\(sec\)/);
+ assert.match(world,/function updateSignals/);
+ assert.match(world,/const grass=surface/);
+ assert.match(world,/Faixa de estacionamento/);
+ assert.match(world,/ÔNIBUS/);
+ assert.match(game,/createCustomer\(serial,Math\.floor\(Math\.random\(\)\*6\)\)/);
+ assert.match(game,/function animateCustomer/);
 });

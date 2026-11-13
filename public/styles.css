@@ -545,3 +545,10 @@ body.scene-fullscreen-open{overflow:hidden}
   .cash-bills .money-unit:hover{transform:none}
   .payment-visual.is-inserting .card-virtual{animation:none}
 }
+
+/* Bairro e densidade de trânsito */
+.scene-tools{gap:8px}
+.traffic-count{white-space:nowrap;font-size:10px;font-weight:800;color:#4b7a60;background:#e8f3e5;border:1px solid #d3e5d1;border-radius:9px;padding:8px 9px}
+.scene-card:fullscreen .traffic-count,.scene-card.fullscreen-fallback .traffic-count{background:#244b3e;color:#def4e0;border-color:#5e7865}
+@media(max-width:770px){.scene-tools{justify-content:flex-start}.traffic-count{font-size:9px;padding:6px 8px}}
+@media(max-width:480px){.traffic-count{display:none}.camera-buttons{flex-wrap:wrap}.camera-btn{padding:8px 9px;font-size:10px}}

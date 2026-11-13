@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { createDistrict } from './world-extra.js';
+import { createDistrict } from './world-extra.js?v=traffic-v6';
 
 // Posto-escola 3D com materiais físicos, texturas procedurais e detalhes de pista leves.
 // Mantém as posições originais das bombas e os eventos usados pelo PDV.
@@ -440,7 +440,8 @@ const views={
   geral:{position:[18,15,18],target:[-.7,1.2,-2.0],zoom:.91},
   bombas:{position:[5.5,8.4,11.0],target:[-3.05,1.3,-1.1],zoom:1.17},
   loja:{position:[6.8,7.5,-1.5],target:[-2.85,1.5,-7.7],zoom:1.30},
-  servicos:{position:[12.3,7.8,8.1],target:[6.4,1.5,-.25],zoom:1.37}
+  servicos:{position:[12.3,7.8,8.1],target:[6.4,1.5,-.25],zoom:1.37},
+  bairro:{position:[49,37,48],target:[0,1.5,2.0],zoom:.60}
 };
 let transitionId=0;
 function focus(name='geral'){
@@ -546,6 +547,8 @@ try{
   window.ecoScene={
     focus,
     requestRender:queueDraw,setQuality,setShopOpen,
+    setTrafficDensity:(value)=>district?.setTrafficDensity(value)||{mode:value,count:0,max:0},
+    getTrafficStats:()=>district?.diagnostics()||{cars:0,max:0,spawned:0,signals:null},
     getContext:()=>({THREE,scene,world,renderer,overviewCamera:camera,controls,stage,anchors,cameraObstacles,requestRender:queueDraw}),
     setActiveCamera:(next)=>{activeCamera=next||null;controls.enabled=!activeCamera;queueDraw();},
     setNight

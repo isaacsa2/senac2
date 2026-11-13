@@ -189,15 +189,22 @@
   }
   function updateCash(){
     if(paymentMethod()!=='dinheiro')return;
+    const cash=sim?.cashAdjustment(total())||{original:total(),due:total(),discount:0};
+    const adjustment=$('#cash-adjustment');
+    if(adjustment){
+      adjustment.textContent=cash.discount>0?
+        'Original: '+money(cash.original)+' • desconto de centavos: -'+money(cash.discount)+' • em dinheiro: '+money(cash.due):
+        'Total em dinheiro: '+money(cash.due)+' (sem ajuste)';
+    }
     const input=$('#cash-received'),amount=input.value===''?NaN:Math.round(Number(input.value)*100);
-    const valid=Number.isFinite(amount)&&amount>=0&&amount<=10000000;
-    const difference=valid?amount-total():NaN;
+    const valid=Number.isSafeInteger(amount)&&amount>=0&&amount<=10000000&&amount%5===0;
+    const difference=valid?amount-cash.due:NaN;
     const change=$('#cash-change');
     const breakdown=$('#cash-change-breakdown');
     change.classList.toggle('insufficient',valid&&difference<0);
     if(!valid){
       if(breakdown)breakdown.replaceChildren();
-      change.textContent='Informe o valor entregue pelo cliente.';
+      change.textContent='Informe um valor recebido em múltiplos de R$ 0,05.';
       allowFinish(false);
     }else if(difference<0){
       if(breakdown)breakdown.replaceChildren();
@@ -295,8 +302,9 @@
       catch(error){$('#payment-error').textContent=error.message;return;}
     }
     const amountReceived=$('#cash-received').value===''?NaN:Math.round(Number($('#cash-received').value)*100);
+    const cash=sim?.cashAdjustment(total())||{original:total(),due:total(),discount:0};
     if(method==='dinheiro'){
-      if(!Number.isFinite(amountReceived)||amountReceived<total()||amountReceived>10000000){
+      if(!Number.isSafeInteger(amountReceived)||amountReceived%5!==0||amountReceived<cash.due||amountReceived>10000000){
         $('#payment-error').textContent='Confira o valor em dinheiro recebido antes de concluir.';return;
       }
     }else if(method!=='prazo'&&!paymentApproved){
@@ -306,10 +314,10 @@
     const payNames={pix:'Pix na maquininha (simulado)',cartao:'Cartão '+($('#card-type').value==='credito'?'crédito':'débito')+' (simulado)',dinheiro:'Dinheiro em espécie (simulado)',prazo:'Nota a prazo (conta a receber fictícia)'};
     const ref=String(now.getTime()).slice(-8);
     const summary=rows.map(e=>'<div class="row-receipt"><span>'+e.product.name+'<br>'+qtyText(e.product,e.qty)+' × '+money(e.product.price)+'</span><span>'+money(Math.round(e.qty*e.product.price))+'</span></div>').join('<br>');
-    $('#receipt-content').innerHTML='<div class="receipt-print"><h2>ECOPOSTO 3D</h2><div style="text-align:center">Laboratório de PDV · Exemplo didático</div><div class="warning">SIMULAÇÃO — SEM VALOR FISCAL</div><div>Operação #'+ref+'</div><div>'+new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'medium'}).format(now)+'</div><hr>'+summary+'<hr><div class="row-receipt total-receipt"><span>TOTAL</span><span>'+money(total())+'</span></div><div>Pagamento: '+payNames[method]+'</div>'+(method==='dinheiro'?'<div>Recebido: '+money(amountReceived)+'</div><div>Troco entregue: '+money(amountReceived-total())+'</div>':method==='prazo'?'<div>Prazo: '+escapeHtml(creditRecord?.id||'')+' · vencimento '+escapeHtml(creditRecord?.due||'')+'</div>':'<div>Terminal: ECO PAY · modo de treinamento</div>')+'<hr><div style="text-align:center">Treinamento exclusivamente educativo.<br>Não comprova compra, pagamento ou abastecimento.</div></div>';
+    $('#receipt-content').innerHTML='<div class="receipt-print"><h2>ECOPOSTO 3D</h2><div style="text-align:center">Laboratório de PDV · Exemplo didático</div><div class="warning">SIMULAÇÃO — SEM VALOR FISCAL</div><div>Operação #'+ref+'</div><div>'+new Intl.DateTimeFormat('pt-BR',{dateStyle:'short',timeStyle:'medium'}).format(now)+'</div><hr>'+summary+'<hr><div class="row-receipt total-receipt"><span>TOTAL</span><span>'+money(total())+'</span></div><div>Pagamento: '+payNames[method]+'</div>'+(method==='dinheiro'?'<div>Ajuste favorável em espécie: -'+money(cash.discount)+'</div><div>Valor em dinheiro: '+money(cash.due)+'</div><div>Recebido: '+money(amountReceived)+'</div><div>Troco entregue: '+money(amountReceived-cash.due)+'</div>':method==='prazo'?'<div>Prazo: '+escapeHtml(creditRecord?.id||'')+' · vencimento '+escapeHtml(creditRecord?.due||'')+'</div>':'<div>Terminal: ECO PAY · modo de treinamento</div>')+'<hr><div style="text-align:center">Treinamento exclusivamente educativo.<br>Não comprova compra, pagamento ou abastecimento.</div></div>';
     // Emite evento antes de limpar o carrinho; o veículo só é liberado após venda.
     window.dispatchEvent(new CustomEvent('ecoposto:sale-complete',{detail:{
-      method,productIds:rows.map(e=>e.product.id),value:total(),creditId:creditRecord?.id||null
+      method,productIds:rows.map(e=>e.product.id),value:method==='dinheiro'?cash.due:total(),creditId:creditRecord?.id||null
     }}));
     paymentDialog.close();
     if(approvalTimer)clearTimeout(approvalTimer);approvalTimer=null;paymentApproved=false;
@@ -438,8 +446,15 @@
   const graphics=$('#graphics-quality');
   function updateQuality(){window.ecoScene?.setQuality?.(graphics.value);}
   graphics.addEventListener('change',updateQuality);
+  const density=$('#traffic-density');
+  function updateDensity(){
+    const result=window.ecoScene?.setTrafficDensity?.(density.value);
+    if(result)$('#traffic-count').textContent='Até '+result.max+' veículos';
+  }
+  density.addEventListener('change',updateDensity);
+  window.addEventListener('ecoposto:scene-ready',updateDensity);
   window.addEventListener('ecoposto:scene-ready',updateQuality);
-  if(window.ecoScene)updateQuality();
+  if(window.ecoScene){updateQuality();updateDensity();}
 
   // Tela cheia nativa da cena (inclui HUD e barra de ferramentas).
   // Se o navegador não expuser Fullscreen API, usa fallback CSS reversível.

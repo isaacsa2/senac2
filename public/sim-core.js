@@ -13,8 +13,7 @@
     {value:50,label:'50 centavos',kind:'coin',color:'#d3d4d0'},
     {value:25,label:'25 centavos',kind:'coin',color:'#d9c5a5'},
     {value:10,label:'10 centavos',kind:'coin',color:'#d8bb9e'},
-    {value:5,label:'5 centavos',kind:'coin',color:'#cfa78d'},
-    {value:1,label:'1 centavo',kind:'coin',color:'#c69c88'}
+    {value:5,label:'5 centavos',kind:'coin',color:'#cfa78d'}
   ]);
   const machineKey='ecoposto-machine-v1',receivableKey='ecoposto-receivables-v1';
   const defaultMachine={approval:72,read_error:10,declined:8,offline:6,pin_error:4,forced:'random'};
@@ -55,8 +54,14 @@
     for(const [code,key] of entries){roll-=settings[key];if(roll<0)return {code,...outcomeText[code]};}
     return {code:'approved',...outcomeText.approved};
   }
+  function cashAdjustment(original){
+    if(!Number.isSafeInteger(original)||original<0||original>10000000)
+      throw new RangeError('Valor em dinheiro inválido');
+    const discount=original%5; // Nunca aumentar o preço do cliente.
+    return {original,due:original-discount,discount};
+  }
   function changeFor(cents){
-    if(!Number.isSafeInteger(cents)||cents<0||cents>10000000)return [];
+    if(!Number.isSafeInteger(cents)||cents<0||cents>10000000||cents%5!==0)return [];
     const result=[];let left=cents;
     for(const item of DENOMS){
       const count=Math.floor(left/item.value);
@@ -100,7 +105,7 @@
     item.status='paid';item.paidAt=new Date().toISOString();
     write(receivableKey,list);return true;
   }
-  function createCustomer(index=0){
+  function createCustomer(index=0,typeIndex=index){
     const types=[
       {id:'gasolina-comum',fuel:'Gasolina Comum',vehicle:'Sedã flex',kind:'flex',capacity:52,liters:18},
       {id:'etanol-comum',fuel:'Etanol Comum',vehicle:'Hatch flex',kind:'flex',capacity:48,liters:22},
@@ -109,10 +114,10 @@
       {id:'gasolina-racing',fuel:'Shell V-Power Racing',vehicle:'Esportivo gasolina',kind:'flex',capacity:60,liters:20},
       {id:'diesel-s500',fuel:'Diesel S500',vehicle:'Utilitário antigo',kind:'diesel-antigo',capacity:72,liters:29}
     ];
-    const n=(Math.max(0,Math.floor(index)))%types.length;
+    const n=(Math.max(0,Math.floor(Number.isFinite(typeIndex)?typeIndex:index)))%types.length;
     const base=types[n];
     const starting=base.capacity-base.liters-5;
     return {...base,fuelId:base.id,plate:'DEMO-'+String(index+1).padStart(3,'0'),customer:['Ana','Carlos','Mariana','João','Beatriz','Rafael'][n]+' (fictício)',tank:starting,requested:base.liters,filled:0,paid:false,orderType:n%3===0?'valor':n%3===1?'litros':'completar',id:'CAR-'+String(index+1).padStart(3,'0')};
   }
-  window.ECO_SIM=Object.freeze({DENOMS,changeFor,denominationsValue,config,setConfig,machineOutcome,receivables,saveCredit,settleCredit,createCustomer,outcomeText});
+  window.ECO_SIM=Object.freeze({DENOMS,cashAdjustment,changeFor,denominationsValue,config,setConfig,machineOutcome,receivables,saveCredit,settleCredit,createCustomer,outcomeText});
 })();

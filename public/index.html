@@ -7,13 +7,13 @@
   <meta name="description" content="EcoPosto 3D: explore um posto de combustíveis em 3D, descubra produtos reais e pratique um caixa de treinamento sem pagamentos de verdade.">
   <title>EcoPosto 3D — Explore, aprenda e simule</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./styles.css?v=traffic-v6">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"}}</script>
-  <script src="./sim-core.js" defer></script>
+  <script src="./sim-core.js?v=traffic-v6" defer></script>
   <script src="./catalog-extra.js" defer></script>
-  <script src="./app.js" defer></script>
-  <script type="module" src="./scene.js"></script>
-  <script type="module" src="./game.js"></script>
+  <script src="./app.js?v=traffic-v6" defer></script>
+  <script type="module" src="./scene.js?v=traffic-v6"></script>
+  <script type="module" src="./game.js?v=traffic-v6"></script>
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true">
@@ -73,12 +73,12 @@
             <div class="game-touch-pad" id="game-touch-pad" aria-label="Movimentação"><button data-move="forward" type="button" aria-label="Andar para frente">▲</button><div><button data-move="left" type="button" aria-label="Andar para esquerda">◀</button><button data-move="back" type="button" aria-label="Andar para trás">▼</button><button data-move="right" type="button" aria-label="Andar para direita">▶</button></div></div>
           </div>
           <span class="scene-helper"><span class="mouse-doodle">↔</span> ARRASTE PARA GIRAR · ZOOM COM RODA OU PINÇA</span>
-          <span class="scene-corner">VISTA <b>01 — 03</b></span>
+          <span class="scene-corner">POSTO + BAIRRO · TRÂNSITO ANIMADO</span>
         </div>
         <div class="scene-toolbar">
-          <div class="camera-buttons" role="group" aria-label="Ângulo da câmera"><button class="camera-btn is-active" data-view="geral" type="button">Vista geral</button><button class="camera-btn" data-view="bombas" type="button">Bombas</button><button class="camera-btn" data-view="loja" type="button">Loja</button><button class="camera-btn" data-view="servicos" type="button">Troca de óleo</button></div>
+          <div class="camera-buttons" role="group" aria-label="Ângulo da câmera"><button class="camera-btn is-active" data-view="geral" type="button">Vista geral</button><button class="camera-btn" data-view="bombas" type="button">Bombas</button><button class="camera-btn" data-view="loja" type="button">Loja</button><button class="camera-btn" data-view="servicos" type="button">Troca de óleo</button><button class="camera-btn" data-view="bairro" type="button">Bairro</button></div>
           <div class="scene-tools">
-            <label class="graphics-label" for="graphics-quality">Gráficos <select id="graphics-quality" aria-label="Qualidade gráfica"><option value="auto">Automático</option><option value="alto">Mais detalhes</option><option value="economico">Econômico</option></select></label>
+            <label class="graphics-label" for="traffic-density">Trânsito <select id="traffic-density" aria-label="Quantidade de veículos no bairro"><option value="baixo">Leve</option><option value="normal" selected>Normal</option><option value="intenso">Intenso</option></select></label><span id="traffic-count" class="traffic-count" aria-live="polite">Trânsito dinâmico</span><label class="graphics-label" for="graphics-quality">Gráficos <select id="graphics-quality" aria-label="Qualidade gráfica"><option value="auto">Automático</option><option value="alto">Mais detalhes</option><option value="economico">Econômico</option></select></label>
             <button class="toolbar-link" id="reset-camera" type="button" title="Voltar para a vista geral">↺ Reiniciar</button>
             <button class="fullscreen-button" id="fullscreen-scene" type="button" aria-pressed="false" aria-label="Abrir posto em tela cheia">⛶ Tela cheia</button>
           </div>
@@ -202,10 +202,11 @@
         <p>Selecione as cédulas recebidas ou digite o valor total. Você pode combinar notas.</p>
         <div class="cash-bills" id="cash-denominations" role="group" aria-label="Adicionar cédulas e moedas fictícias"></div>
         <label for="cash-received">Total recebido (R$)</label>
-        <div class="cash-input-row"><input type="number" id="cash-received" min="0" max="100000" step="0.01" inputmode="decimal" placeholder="Ex.: 100.00"><button type="button" id="cash-reset">Zerar</button></div>
+        <div class="cash-input-row"><input type="number" id="cash-received" min="0" max="100000" step="0.05" inputmode="decimal" placeholder="Ex.: 100.00"><button type="button" id="cash-reset">Zerar</button></div>
         <div class="cash-change-display" id="cash-change" aria-live="polite">Informe o valor recebido</div>
+        <div class="cash-adjustment" id="cash-adjustment" aria-live="polite"></div>
         <div class="cash-change-breakdown" id="cash-change-breakdown" aria-live="polite"></div>
-        <small>Notas e moedas do Real conforme o Banco Central. A moeda de 1 centavo é rara, mas consta para troco exato.</small>
+        <small>Notas e moedas do Real conforme o Banco Central. Usamos moedas de 5, 10, 25 e 50 centavos e R$ 1, conforme o caixa prático.</small>
       </section>
       <section id="credit-group" class="credit-section" hidden aria-label="Venda a prazo de treinamento">
         <div class="credit-head"><strong>NOTA A PRAZO · CARTEIRA ESCOLAR</strong><span>SEM VALOR FISCAL</span></div>

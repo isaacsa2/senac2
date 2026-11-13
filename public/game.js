@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import {createVehicle} from './world-extra.js';
+import {createVehicle,disposeVehicle} from './world-extra.js?v=traffic-v6';
+import {buildRoute,sampleRoute,rotateTowards} from './traffic-paths.js?v=traffic-v6';
 
 // Simulação educativa leve: o mundo 3D fica sob responsabilidade de scene.js.
 // Esta camada implementa personagem, proximidade, missões e abastecimento.
@@ -229,70 +230,84 @@ function initialise(){
     $('customer-next').disabled=true;
     $('customer-release').disabled=state!=='paid';
   }
+  // Atendimento: entradas curvas e estacionamento orientado paralelamente à bomba.
+  // A frente do modelo é +X, inclusive na vaga, como acontece na pista.
+  const customerLaneZ=2.65;
+  const line=(ax,az,bx,bz)=>({type:'line',a:[ax,az],b:[bx,bz]});
+  const curve=(ax,az,cx,cz,bx,bz)=>({type:'curve',a:[ax,az],c:[cx,cz],b:[bx,bz]});
   function createQueueCar(){
     if(currentCar||!sim)return;
-    const order=sim.createCustomer(customerSerial++);
+    const serial=customerSerial++;
+    const order=sim.createCustomer(serial,Math.floor(Math.random()*6));
     const fuel=pumpList.find(p=>p.id===order.fuelId);
-    // Um identificador de atendimento (CAR-001) nunca é um SKU de combustível.
-    // Valide a associação antes de instanciar/renderizar o carro.
     if(!fuel){
-      console.warn('EcoPosto: pedido com combustível desconhecido, atendimento ignorado.',order.fuelId);
-      customerSerial=Math.max(0,customerSerial-1);
-      carStatus('Não foi possível associar o veículo a um combustível válido.','PEDIDO INVÁLIDO');
-      $('customer-next').disabled=false;
-      return;
+      console.warn('EcoPosto: combustível inexistente no pedido do veículo.',order.fuelId);
+      carStatus('Não há bomba correspondente ao combustível solicitado.','PEDIDO INVÁLIDO');
+      $('customer-next').disabled=false;return;
     }
-    const group=createVehicle(['#438eb1','#e2d6be','#7c9b84','#e4e8e8','#a8494c','#677485'][customerSerial%6],
-      order.kind==='diesel'||order.kind==='diesel-antigo'?'pickup':'car');
-    group.position.set(-16,.18,5.2);
-    group.rotation.y=0;
-    world.add(group);
-    currentCar={order,group,state:'arriving',island:fuel.island,driveTarget:{x:fuel.x,z:2.50},pathIndex:0,
-      path:[{x:fuel.x,z:5.2},{x:fuel.x,z:2.5}],leavingPath:[]};
+    const paints=['#438eb1','#e2d6be','#7c9b84','#e4e8e8','#a8494c','#677485','#bf953f','#b2bcc9'];
+    const type=order.kind==='diesel'||order.kind==='diesel-antigo'?
+      (Math.random()>.48?'pickup':'van'):['car','hatch','suv'][Math.floor(Math.random()*3)];
+    const vehicle=createVehicle(paints[Math.floor(Math.random()*paints.length)],type);
+    const entryX=-15.8;
+    const finalX=fuel.x+.20;
+    vehicle.position.set(entryX,.18,5.15);
+    vehicle.rotation.y=0;
+    world.add(vehicle);
+    const arrival=buildRoute({id:'customer-arrival',segments:[
+      line(entryX,5.15,finalX-4.0,5.15),
+      curve(finalX-4.0,5.15,finalX-2.75,2.65,finalX-1.55,customerLaneZ),
+      line(finalX-1.55,customerLaneZ,finalX,customerLaneZ)
+    ]});
+    currentCar={order,group:vehicle,state:'arriving',island:fuel.island,
+      route:arrival,distance:0,velocity:0};
     updateCustomerHUD();ctx.requestRender();
   }
-  function moveCarTo(target,dt){
-    if(!currentCar)return true;
-    const {group}=currentCar;
-    const dx=target.x-group.position.x,dz=target.z-group.position.z;
-    const distance=Math.hypot(dx,dz);
-    if(distance<.06){group.position.x=target.x;group.position.z=target.z;return true;}
-    const rate=Math.min(distance,3.2*dt);
-    group.rotation.y=Math.atan2(dx,dz)-Math.PI/2;
-    group.position.x+=dx/distance*rate;group.position.z+=dz/distance*rate;
-    for(const wheel of group.userData.wheels||[])wheel.rotation.z-=rate/.35;
-    return false;
-  }
-  function animateCustomer(dt){
+  function animateCustomer(delta){
     if(!currentCar)return false;
-    const c=currentCar;
-    if(c.state==='arriving'){
-      if(moveCarTo(c.path[c.pathIndex],dt)){
-        c.pathIndex++;
-        if(c.pathIndex>=c.path.length){c.state='parked';updateCustomerHUD();}
+    const customer=currentCar;
+    if(customer.state!=='arriving'&&customer.state!=='leaving')return false;
+    const remaining=Math.max(0,customer.route.length-customer.distance);
+    const targetSpeed=remaining<3?Math.min(3.2,remaining*1.7):3.4;
+    const accel=targetSpeed<customer.velocity?4.0:2.0;
+    const dt=Math.max(0,Math.min(.05,delta));
+    customer.velocity+=Math.max(-accel*dt,Math.min(accel*dt,targetSpeed-customer.velocity));
+    const step=Math.min(remaining,customer.velocity*dt);
+    customer.distance=Math.min(customer.route.length,customer.distance+step);
+    const p=sampleRoute(customer.route,customer.distance);
+    customer.group.position.set(p.x,.18+Math.sin(performance.now()/170)*.007,p.z);
+    customer.group.rotation.y=rotateTowards(customer.group.rotation.y,p.heading,dt*4.6);
+    customer.group.userData.spinWheels(step);
+    customer.group.userData.setBraking(remaining<2.5);
+    customer.group.userData.setTurnSignal(p.turning,Math.floor(performance.now()/450)%2===0);
+    if(customer.distance>=customer.route.length-.02){
+      if(customer.state==='arriving'){
+        customer.group.userData.setBraking(true);
+        customer.group.userData.setTurnSignal(false,false);
+        customer.state='parked';customer.velocity=0;updateCustomerHUD();
+      }else{
+        disposeVehicle(customer.group);
+        currentCar=null;completedCars++;updateCustomerHUD();
       }
-      return true;
     }
-    if(c.state==='leaving'){
-      if(moveCarTo(c.leavingPath[c.pathIndex],dt)){
-        c.pathIndex++;
-        if(c.pathIndex>=c.leavingPath.length){
-          world.remove(c.group);
-          c.group.traverse(m=>{
-            if(m.isMesh){m.geometry?.dispose?.();}
-          });
-          currentCar=null;completedCars++;updateCustomerHUD();
-        }
-      }
-      return true;
-    }
-    return false;
+    return true;
   }
   function releaseCar(){
     if(!currentCar||currentCar.state!=='paid')return;
-    currentCar.state='leaving';currentCar.pathIndex=0;
-    currentCar.leavingPath=[{x:currentCar.group.position.x,z:5.2},{x:16,z:5.2}];
-    updateCustomerHUD();
+    const p=currentCar.group.position;
+    const exitStart=p.x;
+    const bendX=Math.min(10,exitStart+3.3);
+    const depart=buildRoute({id:'customer-exit',segments:[
+      line(exitStart,p.z,exitStart+1.4,p.z),
+      curve(exitStart+1.4,p.z,bendX,5.15,bendX+1.2,5.15),
+      // Saída pelo acesso do posto até se incorporar à avenida asfaltada.
+      line(bendX+1.2,5.15,10.10,5.15),
+      curve(10.10,5.15,12.15,5.15,12.15,8.70),
+      line(12.15,8.70,30.5,8.70)
+    ]});
+    currentCar.route=depart;
+    currentCar.distance=0;currentCar.velocity=0;
+    currentCar.state='leaving';updateCustomerHUD();
   }
   function selectNozzle(island){
     const fuel=pumpList.filter(p=>p.island===island.id);
