@@ -156,7 +156,34 @@ export function createDistrict({world,scene,lowPower=false}){
   const district=new THREE.Group();
   district.name='bairro-entorno';
   world.add(district);
-  const asphalt=surface('#495359',.97),pavement=surface('#b4b9b4',.97),stone=surface('#dedcce',1),
+  // Texturas leves procedurais: nenhuma imagem de asfalto/calçada externa.
+  function groundPattern(base,style){
+    const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
+    const g=canvas.getContext('2d');
+    g.fillStyle=base;g.fillRect(0,0,256,256);
+    // Ruído determinístico, sem cintilação de textura nem HTTP.
+    for(let i=0;i<3800;i++){
+      const x=(i*67+11)%256,y=(i*157+(i>>2)*19)%256;
+      const tone=(i*73)%27;
+      g.fillStyle='rgba(28,36,37,'+(tone/2450).toFixed(4)+')';
+      g.fillRect(x,y,(i%4===0?2:1),1);
+    }
+    if(style==='walk'){
+      g.strokeStyle='rgba(89,94,85,.12)';g.lineWidth=1.7;
+      for(let n=0;n<=256;n+=64){
+        g.beginPath();g.moveTo(n,0);g.lineTo(n,256);g.stroke();
+        g.beginPath();g.moveTo(0,n);g.lineTo(256,n);g.stroke();
+      }
+    }
+    const texture=new THREE.CanvasTexture(canvas);
+    texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+    texture.repeat.set(style==='walk'?5:7,style==='walk'?5:7);
+    texture.colorSpace=THREE.SRGBColorSpace;
+    texture.anisotropy=2;
+    return new THREE.MeshStandardMaterial({map:texture,roughness:.98,metalness:0});
+  }
+  const asphalt=groundPattern('#555e63','road'),
+    pavement=groundPattern('#bfc1b8','walk'),stone=surface('#dedcce',1),
     yellow=surface('#f0d99d'),white=surface('#e8ece7'),dark=surface('#354246'),
     foliage=surface('#5b8b6d'),stem=surface('#806f54');
   const traffic=[], clouds=[],blinkers=[],walking=[],signals=[],parkedVehicles=[],ambientDetails=[];
@@ -249,7 +276,18 @@ export function createDistrict({world,scene,lowPower=false}){
     const group=new THREE.Group();group.position.set(x,0,z);district.add(group);
     const wall=surface(hue,.93),border=surface('#dee1da'),windowMat=surface('#517d87',.22,.17);
     cube(w,h,d,0,h/2+.22,0,wall,group);
-    cube(w+.15,.23,d+.15,0,h+.32,0,dark,group);
+    cube(w+.18,.23,d+.18,0,h+.32,0,dark,group);
+    // Beiral e sancas criam profundidade sem alterar o contorno do prédio.
+    cube(w+.11,.075,d+.10,0,h+.48,0,stone,group);
+    cube(w+.20,.08,.23,0,2.52,d/2+.15,surface(sign?'#db674e':'#cbd8d8'),group);
+    if(!lowPower){
+      // Pequenos frisos e caixilhos nas fachadas comerciais.
+      for(const side of [-1,1])cube(.09,Math.max(1.7,h-1.1),.07,
+        side*(w/2-.24),h*.51,d/2+.04,border,group);
+      // Caixa d'água, climatização e saída de ar no topo.
+      cube(.83,.39,.73,w*.22,h+.69,-d*.18,surface('#7b929a'),group);
+      cube(.47,.14,.52,w*.22,h+.95,-d*.18,dark,group);
+    }
     const n=Math.max(2,Math.floor(w/1.4));
     for(let i=0;i<n;i++){
       const px=-w/2+(i+.5)*w/n;
@@ -259,7 +297,14 @@ export function createDistrict({world,scene,lowPower=false}){
       }
     }
     if(sign){
-      cube(w*.80,.56,.065,0,2.0,d/2+.055,sign==='FARMÁCIA'?surface('#29816a'):dark,group);
+      const shopHue=sign==='FARMÁCIA'?'#22816e':sign==='LANCHES'?'#ae4632':sign==='OFICINA'?'#4c6e84':'#4b6966';
+      cube(w*.82,.58,.065,0,2.02,d/2+.055,surface(shopHue),group);
+      // Portas e toldos de lojas de rua, numa calçada externa ao asfalto.
+      cube(1.45,1.70,.058,0,1.04,d/2+.061,windowMat,group);
+      cube(1.53,.09,.12,0,1.96,d/2+.090,border,group);
+      cube(w*.73,.10,.59,0,2.38,d/2+.40,surface(sign==='LANCHES'?'#d8b66a':'#dfd5bc'),group);
+      for(const ix of [-1,1])
+        cube(.08,.35,.10,ix*w*.34,2.13,d/2+.38,surface(shopHue),group);
       const c=document.createElement('canvas');c.width=512;c.height=96;
       const cx=c.getContext('2d');cx.font='bold 60px Arial';cx.textAlign='center';cx.textBaseline='middle';cx.fillStyle='#fff';cx.fillText(sign,256,49);
       const tx=new THREE.CanvasTexture(c);tx.colorSpace=THREE.SRGBColorSpace;
@@ -314,9 +359,43 @@ export function createDistrict({world,scene,lowPower=false}){
     }
   }
   for(let x=-29;x<=29;x+=5.8){
-    tree(x,20.0,.9);
-    if(Math.abs(x)>12)tree(x,-14.7,.85);
+    // Árvores ficam no passeio e fora das faixas de rolamento.
+    tree(x,20.95,.88+(x%3)*.026);
+    if(Math.abs(x)>12)tree(x,-15.35,.84);
   }
+  // Jardins, palmeiras e flores em canteiros fora das ruas.
+  const planterStone=surface('#d7d5c6'),leafDark=surface('#3e7754'),
+    leafLight=surface('#7a9e62'),soil=surface('#8c7362');
+  function flowerBed(x,z,width=2.1,depth=.85){
+    cube(width,.23,depth,x,.27,z,planterStone);
+    cube(width-.17,.05,depth-.14,x,.42,z,soil);
+    for(let j=0;j<7;j++){
+      const dx=-width*.39+(j+.32)*width/7;
+      const node=new THREE.Mesh(new THREE.IcosahedronGeometry(.16+j%3*.025,0),j%2?leafDark:leafLight);
+      node.position.set(x+dx,.58,z+Math.sin(j*2)*depth*.20);district.add(node);
+      if(j%3===0){
+        const flower=new THREE.Mesh(new THREE.SphereGeometry(.055,6,5),surface(j%2?'#f3c45f':'#dd7d8b'));
+        flower.position.set(x+dx,.74,z+Math.sin(j*2)*depth*.20);district.add(flower);
+      }
+    }
+  }
+  for(const [x,z] of [[-27.5,21.85],[-23.7,21.85],[22.6,21.85],[28.5,21.85],
+    [-28.5,-16.3],[-24.0,-16.3],[24.3,-16.3],[29,-16.3]]){
+    if(lowPower&&Math.abs(x)<25)continue;
+    flowerBed(x,z);
+  }
+  // Canteiros e áreas verdes junto às construções, não ao corredor do posto.
+  function palm(x,z){
+    cylinder(.11,3.20,x,1.86,z,stem);
+    for(let j=0;j<6;j++){
+      const angle=j*Math.PI/3;
+      const leaf=new THREE.Mesh(new THREE.ConeGeometry(.32,2.45,5),leafDark);
+      leaf.position.set(x+Math.cos(angle)*.55,3.56,z+Math.sin(angle)*.55);
+      leaf.rotation.z=Math.cos(angle)*.62;leaf.rotation.x=Math.sin(angle)*.55;
+      district.add(leaf);
+    }
+  }
+  if(!lowPower){palm(-29,-22.6);palm(28.5,-22.6);}
   // Ponto de ônibus, banco, lixeira e iluminação pública com faróis noturnos.
   cube(3.4,.18,1.5,6.0,2.7,18.1,dark);
   for(const x of [4.6,7.4])for(const z of [17.5,18.65])cube(.11,2.5,.10,x,1.5,z,dark);
@@ -326,6 +405,24 @@ export function createDistrict({world,scene,lowPower=false}){
   cube(.54,.95,.5,8.4,.65,18.2,surface('#35604b'));
   cylinder(.07,2.1,4.35,1.29,18.37,dark);
   label('ÔNIBUS',4.35,2.56,18.39,1.22,.35,'#247a66');
+  // Comunicação de ponto e abrigo, com painel de informações e banco.
+  cube(1.17,1.12,.08,6.00,1.78,18.855,surface('#e2ebe8'));
+  label('LINHAS',6.00,2.18,18.905,1.03,.18,'#286254');
+  label('CENTRO',6.00,1.91,18.905,1.05,.17,'#417f79');
+  label('BAIRRO',6.00,1.70,18.905,1.05,.17,'#417f79');
+  cube(.26,.98,.29,7.91,.66,18.30,surface('#d5c84b'));
+  // Iluminação de fachadas e floreiras comerciais; mantém a qualidade móvel.
+  for(const x of [-10.6,0,10.8,-26.3,26.2]){
+    const z=Math.abs(x)>20?-6.46:-16.95;
+    cube(.12,.30,.25,x,2.49,z,surface('#e7d8aa'));
+    cube(.11,.13,.11,x,2.51,z+.16,surface('#f0e1bf'));
+  }
+  // Placas azuis de rua em suportes finos, em áreas sem circulação de veículos.
+  for(const [x,z,name] of [[-26.5,19.90,'AV. CENTRAL'],[24.9,19.90,'RUA DO COMÉRCIO'],
+    [-26,-15.45,'VILA DO POSTO'],[25,-15.45,'CENTRO']]){
+    cylinder(.06,2.6,x,1.53,z,dark);
+    label(name,x,2.75,z+.11,2.3,.32,'#28607a');
+  }
   // Refletores laterais, caixas elétricas e defensas.
   for(const [x,z] of [[-13.4,-12.3],[13.45,6.05],[-13.4,18.1]]){
     cube(.44,.7,.40,x,.50,z,surface('#648473'));
@@ -635,7 +732,10 @@ export function createDistrict({world,scene,lowPower=false}){
       if(createTrafficCar(false))spawnDelay=1.1+Math.random()*1.9;
       else spawnDelay=.7;
     }
-    for(const cloud of clouds)cloud.group.position.x=cloud.base+Math.sin(sec*cloud.speed)*3;
+    for(const cloud of clouds){
+      cloud.group.position.x=cloud.base+Math.sin(sec*cloud.speed)*3;
+      cloud.group.position.y=18+Math.sin(sec*.06+cloud.base)*.24;
+    }
     for(const p of walking){
       const {profile}=p;
       const walk=Math.sin(sec*profile.speed+p.offset)*profile.span;

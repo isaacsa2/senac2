@@ -3,22 +3,23 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#edf4ee">
-  <meta name="description" content="EcoPosto 3D: explore um posto de combustíveis em 3D, descubra produtos reais e pratique um caixa de treinamento sem pagamentos de verdade.">
-  <title>EcoPosto 3D — Explore, aprenda e simule</title>
+  <meta name="theme-color" content="#df2034">
+  <meta name="description" content="EcoPosto 3D: simulação independente inspirada em postos Shell, com bairro animado, Shell Select, oficina, abastecimento, produtos e caixa de treinamento.">
+  <title>EcoPosto 3D | Edição Shell — Posto-escola interativo</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./styles.css?v=polish-v71">
+  <link rel="stylesheet" href="./styles.css?v=shell-v9">
   <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.181.2/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.181.2/examples/jsm/"}}</script>
   <script src="./operations-core.js?v=realism-v7" defer></script>
   <script src="./sim-core.js?v=realism-v7" defer></script>
   <script src="./catalog-extra.js" defer></script>
   <script src="./app.js?v=polish-v71" defer></script>
   <script src="./operations-ui.js?v=realism-v7" defer></script>
-  <script type="module" src="./scene.js?v=street-v8"></script>
+  <script type="module" src="./scene.js?v=shell-v9"></script>
   <script type="module" src="./game.js?v=street-v8"></script>
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" class="svg-defs" aria-hidden="true">
+    <symbol id="i-shell-crest" viewBox="0 0 64 64"><path d="M32 55C14 49 8 39 10 27l7-5 2-12 10 5 9-9 7 9 11-3-1 13 7 8C60 44 48 51 32 55Z" fill="#ffdf29" stroke="#d52034" stroke-width="4" stroke-linejoin="round"/><path d="M32 52 20 19m12 33L27 15m5 37L38 15m-6 37 13-31m-13 31 21-24" stroke="#d52034" stroke-width="2.3" stroke-linecap="round"/></symbol>
     <symbol id="i-pump" viewBox="0 0 24 24"><path d="M4 21V5a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v16M2 21h17M7 7h7v6H7zM17 9h2l2 2v7a2 2 0 0 1-4 0v-2M8 17h5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></symbol>
     <symbol id="i-bag" viewBox="0 0 24 24"><path d="M4 8h16l-1 13H5L4 8zm4 1V6a4 4 0 0 1 8 0v3" stroke="currentColor" stroke-width="1.7" fill="none" stroke-linecap="round" stroke-linejoin="round"/></symbol>
     <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2c-4 5-7.5 9-7.5 13a7.5 7.5 0 0 0 15 0C19.5 11 16 7 12 2z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M9 17a4 4 0 0 1-1-3" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
@@ -31,7 +32,7 @@
   </svg>
   <header class="site-header">
     <div class="shell nav-wrap">
-      <a href="#inicio" class="logo" aria-label="EcoPosto, voltar ao início"><span class="logo-icon"><svg><use href="#i-pump"></use></svg></span><span><strong>eco<span>posto</span></strong><small>LAB INTERATIVO</small></span></a>
+      <a href="#inicio" class="logo" aria-label="EcoPosto 3D, simulação independente com tema Shell, voltar ao início"><span class="logo-icon"><svg><use href="#i-shell-crest"></use></svg></span><span><strong>eco<span>posto</span></strong><small>EDIÇÃO SHELL · NÃO OFICIAL</small></span></a>
       <nav class="nav-links" aria-label="Navegação principal"><a href="#explorar">Explorar 3D</a><a href="#produtos">Produtos</a><a href="#como-funciona">Como funciona</a></nav>
       <button class="button button-dark cart-trigger" type="button" data-open-cart aria-label="Abrir caixa de treinamento"><svg><use href="#i-bag"></use></svg><span>Meu PDV</span><span class="cart-count" id="cart-count">0</span></button>
     </div>
@@ -39,21 +40,21 @@
   <main id="inicio">
     <section class="hero shell" aria-labelledby="hero-title">
       <div class="hero-copy">
-        <div class="eyebrow"><span class="pulse-dot"></span> UMA EXPERIÊNCIA PARA APRENDER NA PRÁTICA</div>
-        <h1 id="hero-title">Seu posto.<br>Seu aprendizado.<br><em>Outra dimensão.</em></h1>
-        <p>Explore um posto em 3D, descubra o que cada combustível e produto faz e pratique um atendimento no caixa — tudo no mesmo lugar.</p>
+        <div class="eyebrow"><span class="pulse-dot"></span> SHELL-INSPIRED · POSTO-ESCOLA INTERATIVO</div>
+        <h1 id="hero-title">Um posto vivo.<br>Um bairro inteiro.<br><em>Você no comando.</em></h1>
+        <p>Entre em um posto-escola com visual inspirado na Shell: cobertura iluminada, loja de conveniência, troca de óleo, trânsito de bairro, clientes e um caixa completo. Caminhe, abasteça e aprenda com cada atendimento.</p>
         <div class="hero-actions"><a class="button button-primary" href="#explorar">Explorar o posto <svg><use href="#i-arrow"></use></svg></a><a href="#produtos" class="button button-outline">Ver produtos</a></div>
-        <div class="hero-stats"><div><strong>3D</strong><span>interativo</span></div><div><strong id="catalog-count">14</strong><span>itens no catálogo</span></div><div><strong>100%</strong><span>simulado</span></div></div>
+        <div class="hero-stats"><div><strong>3D</strong><span>com vida</span></div><div><strong id="catalog-count">14</strong><span>itens no catálogo</span></div><div><strong>100%</strong><span>simulado</span></div></div>
       </div>
-      <div class="hero-aside" aria-hidden="true"><div class="hero-circle circle-a"></div><div class="hero-circle circle-b"></div><div class="hero-sticker"><span class="sticker-star">✳</span><span>Aprender<br>fazendo!</span></div><div class="hero-number">03<span>áreas para explorar</span></div><div class="hero-line line-a"></div><div class="hero-line line-b"></div></div>
+      <div class="hero-aside" aria-hidden="true"><div class="hero-circle circle-a"></div><div class="hero-circle circle-b"></div><div class="hero-sticker"><span class="sticker-star">✳</span><span>POSTO<br>ESCOLA!</span></div><div class="hero-number">03<span>áreas para explorar</span></div><div class="hero-line line-a"></div><div class="hero-line line-b"></div></div>
     </section>
     <section id="explorar" class="scene-section shell" aria-labelledby="scene-title">
-      <div class="section-heading scene-heading"><div><span class="section-kicker">01 / EXPLORE</span><h2 id="scene-title">Um posto inteiro em <span>3D.</span></h2><p>Explore livremente ou entre no <strong>modo frentista</strong>: caminhe pelo pátio, abasteça o veículo e registre a venda no PDV.</p></div><span class="scene-tag"><span class="live-dot"></span> CENA INTERATIVA</span></div>
+      <div class="section-heading scene-heading"><div><span class="section-kicker">01 / EXPLORE</span><h2 id="scene-title">Um posto inteiro com <span>mais vida.</span></h2><p>Conheça a cobertura em vermelho e amarelo, a <strong>Shell Select</strong>, a oficina <strong>Shell Helix</strong> e as ruas do entorno. No modo frentista, caminhe pelo pátio, atenda veículos e registre vendas fictícias no PDV.</p></div><span class="scene-tag"><span class="live-dot"></span> CENA INTERATIVA</span></div>
       <div class="scene-card">
-        <div class="scene-topbar"><span><span class="scene-topbar-mark"></span>ECOPOSTO <b>WORLD</b></span><span class="scene-topbar-right">MODELO 3D · DEMONSTRAÇÃO</span></div>
+        <div class="scene-topbar"><span><span class="scene-topbar-mark"></span>SHELL-INSPIRED <b>STATION WORLD</b></span><span class="scene-topbar-right">BAIRRO VIVO · TREINAMENTO 3D</span></div>
         <div class="scene-stage" id="scene-stage" aria-label="Modelo tridimensional de um posto com bombas de combustível, loja de conveniência e serviços">
           <div id="scene-canvas" class="scene-canvas"></div>
-          <div class="scene-fallback" id="scene-fallback"><div class="fallback-roof"><b>eco<span>posto</span></b></div><div class="fallback-pumps"><span>GASOLINA</span><span>ETANOL</span><span>DIESEL</span></div><div class="fallback-ground"></div><p>Visualização 3D requer WebGL e acesso ao módulo gráfico.</p></div>
+          <div class="scene-fallback" id="scene-fallback"><div class="fallback-roof"><b>SHELL<span> STYLE</span></b></div><div class="fallback-pumps"><span>GASOLINA</span><span>ETANOL</span><span>DIESEL</span></div><div class="fallback-ground"></div><p>Visualização 3D requer WebGL e acesso ao módulo gráfico.</p></div>
           <div class="scene-marker-layer" id="scene-markers"></div>
           <div class="game-launch" id="game-launch">
             <span class="game-launch-tag">SIMULAÇÃO INTERATIVA · MISSÃO 01</span>
@@ -76,7 +77,7 @@
             <div class="game-touch-pad" id="game-touch-pad" aria-label="Movimentação"><button data-move="forward" type="button" aria-label="Andar para frente">▲</button><div><button data-move="left" type="button" aria-label="Andar para esquerda">◀</button><button data-move="back" type="button" aria-label="Andar para trás">▼</button><button data-move="right" type="button" aria-label="Andar para direita">▶</button></div></div>
           </div>
           <span class="scene-helper"><span class="mouse-doodle">↔</span> ARRASTE PARA GIRAR · ZOOM COM RODA OU PINÇA</span>
-          <span class="scene-corner">POSTO + BAIRRO · TRÂNSITO ANIMADO</span>
+          <span class="scene-corner">SHELL SELECT · HELIX · BAIRRO VIVO</span>
         </div>
         <div class="scene-toolbar">
           <div class="camera-buttons" role="group" aria-label="Ângulo da câmera"><button class="camera-btn is-active" data-view="geral" type="button">Vista geral</button><button class="camera-btn" data-view="bombas" type="button">Bombas</button><button class="camera-btn" data-view="loja" type="button">Loja</button><button class="camera-btn" data-view="servicos" type="button">Troca de óleo</button><button class="camera-btn" data-view="bairro" type="button">Bairro</button></div>
@@ -111,6 +112,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <div id="drawer-backdrop" class="drawer-backdrop" hidden></div>
   <aside class="cart-drawer" id="cart-drawer" role="dialog" aria-modal="true" aria-label="Simulador de PDV" aria-hidden="true" tabindex="-1"><div class="drawer-header"><div><span class="section-kicker">CAIXA DE TREINAMENTO</span><h2>Meu PDV <span class="drawer-badge">DEMO</span></h2></div><button id="close-cart" class="icon-button" type="button" aria-label="Fechar caixa"><svg><use href="#i-x"></use></svg></button></div><div class="drawer-hint"><svg><use href="#i-info"></use></svg> Este é um exercício. Não existe cobrança ou pagamento real.</div><div class="cart-items" id="cart-items"></div><div class="cart-bottom"><div class="cart-total-line"><span>Total do pedido</span><strong id="cart-total">R$ 0,00</strong></div><button id="checkout-btn" class="button button-primary button-full" type="button">Ir para pagamento simulado <svg><use href="#i-arrow"></use></svg></button><button id="clear-cart" class="button-text" type="button">Limpar pedido</button></div></aside>
+<p class="brand-notice" role="note">Projeto independente e educativo, com ambientação inspirada na identidade visual Shell. Não é um produto oficial da Shell, da Raízen ou de suas redes. Marcas e nomes são referências didáticas; preços e transações são fictícios.</p>
   <dialog id="nozzle-dialog" class="modal nozzle-dialog" aria-labelledby="nozzle-title">
     <div class="modal-inner">
       <button type="button" class="icon-button modal-close" id="nozzle-close" aria-label="Fechar escolha do bico">✕</button>

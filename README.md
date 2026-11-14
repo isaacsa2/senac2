@@ -192,3 +192,27 @@ O CI executa testes unitários de regras e regressões e um teste de interface c
 Esta atualização prioriza estabilidade, clareza visual e coerência de circulação. Ainda não é um simulador certificado de trânsito ou de operação de posto de combustíveis.
 
 A V8 também interrompe os passeios longitudinais antes da avenida principal (faixa z=6,75–17,65), que na versão anterior tinham superfície elevada sobre a rua. A entrada e saída do posto têm asfalto contínuo sem veículo decorativo bloqueando as passagens.
+
+
+## V9 — acabamento Shell-inspired e cenário urbano detalhado
+
+O **EcoPosto 3D** continua um projeto independente de treinamento, mas ganhou um visual inspirado em postos Shell do Brasil. Isso **não é uma versão oficial da Shell ou Raízen**, não representa licença comercial, parceria, aprovação, preços praticados ou manual operacional real.
+
+### Identidade visual
+- Cobertura com testeira branca e faixas vermelha e amarela, luminárias sob o teto e detalhes luminosos nas colunas.
+- Emblema de concha **estilizado gerado proceduralmente em Canvas**, sem baixar imagens de terceiros.
+- Bombas com corpo branco, faixa vermelha, letreiros dos produtos e detalhes amarelos.
+- Totem de preços redesenhado com valores **expressamente fictícios** e identificação de posto-escola.
+- Fachada da conveniência com visual **Shell Select**, cafeteria interna, balcões e prateleiras.
+- Oficina com identidade **Shell Helix**, etiquetas, equipamentos e acabamento reformulado.
+- Site e interface com a mesma paleta em cartões, cabeçalhos, botões, HUD e telas responsivas; favicon atualizado.
+
+### Bairro e texturas
+- Asfalto com grão procedural e calçadas com pequenas juntas para melhorar a profundidade.
+- Edifícios com marquises, portas, caixilhos, beirais, climatização e placas de comércio.
+- Áreas verdes com canteiros, flores, arbustos e palmeiras posicionadas longe da pista.
+- Ponto de ônibus detalhado com painel de linhas fictícias, bancos e comunicação visual de rua.
+- Nuvens com leve variação de altura.
+- Em telas de baixo desempenho, detalhes secundários são reduzidos para manter jogabilidade.
+
+A V9 preserva as mesmas posições de bombas, rotas de trânsito, controles do modo frentista, inventário e lógica de pagamentos da V8. O CI tem regressões específicas para branding, links de recursos, geometria e efeitos visuais.

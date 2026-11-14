@@ -477,3 +477,43 @@ test('V8 road traffic cannot clip the customer or park decorative cars in lanes'
   assert.match(scene,/from '\.\/world-extra\.js\?v=street-v8'/);
   assert.match(game,/from '\.\/world-extra\.js\?v=street-v8'/);
 });
+
+
+test('Shell-inspired V9 facade has consistent physical identity without gameplay changes',()=>{
+  const scene=read('public/scene.js'),html=read('public/index.html');
+  const css=read('public/styles.css'),icon=read('public/assets/favicon.svg');
+  assert.match(scene,/function shellMark\(/);
+  assert.match(scene,/planeLabel\('SHELL',3\.00/);
+  assert.match(scene,/planeLabel\('SHELL  SELECT'/);
+  assert.match(scene,/planeLabel\('SHELL HELIX'/);
+  assert.match(scene,/planeLabel\('TROCA DE ÓLEO'/);
+  assert.match(scene,/planeLabel\('POSTO-ESCOLA  •  SIMULAÇÃO'/);
+  assert.match(scene,/VALORES FICTÍCIOS/);
+  assert.match(scene,/title:'FLEX'/);
+  assert.match(scene,/title:'DIESEL'/);
+  assert.match(scene,/title:'PREMIUM'/);
+  assert.match(html,/Edição Shell/);
+  assert.match(html,/não oficial|NÃO OFICIAL/);
+  assert.match(html,/sem vínculo|Não é um produto oficial/);
+  assert.match(html,/src="\.\/scene\.js\?v=shell-v9"/);
+  assert.match(html,/href="\.\/styles\.css\?v=shell-v9"/);
+  assert.match(css,/--shell-red:#d82235/);
+  assert.match(css,/--shell-yellow:#ffdf30/);
+  assert.match(icon,/fill="#ffe13d"/);
+});
+test('V9 street materials, landscaping and architecture stay off game movement code',()=>{
+  const world=read('public/world-extra.js'),game=read('public/game.js');
+  const scene=read('public/scene.js');
+  for(const rule of [/function groundPattern\(/,/const asphalt=groundPattern\(/,
+      /function flowerBed\(/,/function palm\(/,/BAIRRO/,/AV\. CENTRAL/,
+      /windowMat=surface/,/Portas e toldos de lojas de rua/]){
+    assert.ok(rule.test(world)||rule.test(scene),'visual feature missing: '+rule);
+  }
+  assert.match(world,/lowPower&&Math\.abs\(x\)<25/);
+  assert.match(world,/if\(!lowPower\)\{palm/);
+  assert.match(world,/trafficOverlaps\(probe,peer,\.58\)/);
+  assert.match(game,/isRouteFreeFor\?\.\(customer\.group,nextPose\)/);
+  assert.match(scene,/getTrafficCars:/);
+  assert.doesNotMatch(scene,/car\(9\.60,4\.50/);
+  assert.doesNotMatch(scene,/car\(-9\.40,4\.60/);
+});

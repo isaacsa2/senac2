@@ -17,6 +17,14 @@ try{
   await page.goto('http://127.0.0.1:8765/',{waitUntil:'domcontentloaded',timeout:20000});
   await page.waitForFunction(()=>Boolean(window.ecoScene&&window.ecoGame&&window.ECO_OPERATIONS),{timeout:45000});
   console.log('Scene initialized');
+  // Shell-themed website assets load and the independent disclosure is visible.
+  assert.match(await page.title(),/Edição Shell/);
+  assert.ok(await page.locator('.brand-notice').count()===1);
+  const branding=await page.locator('.brand-notice').innerText();
+  assert.match(branding,/não é um produto oficial/);
+  assert.ok(await page.evaluate(()=>getComputedStyle(document.querySelector('.site-header'),'::before').backgroundImage.includes('linear-gradient')),
+    'header Shell-inspired stripe not rendered');
+
   // As calçadas elevadas nunca podem atravessar a via lateral.
   const sidewalks=await page.evaluate(()=>window.ecoScene.getSidewalkSegments());
   assert.equal(sidewalks.length,6,'two split sidewalk strips, three segments each');

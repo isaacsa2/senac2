@@ -13,10 +13,10 @@ const lowPower = () => smallScreen() || (navigator.hardwareConcurrency||8)<=4;
 const color = (hex) => new THREE.MeshStandardMaterial({color:hex,roughness:.87,metalness:.02});
 const palette = {
   grass:color('#d6e7d4'), concrete:color('#f2eee4'), road:color('#485d5c'),
-  white:color('#fffdf4'), trim:color('#1d7358'), green:color('#207859'),
-  dark:color('#244a42'), darkGlass:color('#305f68'), glass:color('#82b6b5'),
-  lime:color('#b9e879'), gold:color('#f7c965'), gray:color('#7d958b'),
-  wheels:color('#273634'), blue:color('#477ca9'), red:color('#d65a51'),
+  white:color('#fffdf7'), trim:color('#dc2030'), green:color('#e01f33'),
+  dark:color('#29343b'), darkGlass:color('#325665'), glass:color('#82b6b5'),
+  lime:color('#ffda29'), gold:color('#ffcf24'), gray:color('#89949a'),
+  wheels:color('#273634'), blue:color('#477ca9'), red:color('#df2036'),
   metal:new THREE.MeshStandardMaterial({color:'#9caeb4',metalness:.67,roughness:.29}),
   glass:new THREE.MeshPhysicalMaterial({color:'#8ac9d7',metalness:.05,roughness:.12,transparent:true,opacity:.65,side:THREE.DoubleSide}),
   led:new THREE.MeshStandardMaterial({color:'#fff5cd',emissive:'#ffdb90',emissiveIntensity:1.7,roughness:.24}),
@@ -93,6 +93,30 @@ function buildScene(){
     const obj=new THREE.Mesh(new THREE.PlaneGeometry(w,h),makeLabel(text,fg,bg,fontSize));
     obj.position.set(x,y,z);obj.rotation.y=rotation;world.add(obj);return obj;
   }
+  // Emblema de concha estilizada feito com geometria Canvas; não carrega imagens externas.
+  function shellMark(x,y,z,size=.70,parent=world){
+    const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
+    const g=canvas.getContext('2d');
+    g.fillStyle='#fffdf9';g.beginPath();g.roundRect(8,8,240,240,32);g.fill();
+    g.strokeStyle='#dd1d31';g.lineWidth=11;g.fillStyle='#ffdf27';g.lineJoin='round';
+    g.beginPath();g.moveTo(128,215);
+    g.bezierCurveTo(63,190,27,155,35,114);
+    g.bezierCurveTo(37,92,62,80,58,51);
+    g.bezierCurveTo(78,62,95,47,106,30);
+    g.bezierCurveTo(119,46,136,43,148,29);
+    g.bezierCurveTo(170,48,183,47,200,49);
+    g.bezierCurveTo(195,79,223,93,220,119);
+    g.bezierCurveTo(219,167,181,189,128,215);
+    g.closePath();g.fill();g.stroke();
+    g.lineWidth=5;g.strokeStyle='#dd1d31';
+    for(const target of [[53,100],[81,58],[107,49],[148,48],[177,63],[204,101]]){
+      g.beginPath();g.moveTo(128,208);g.lineTo(target[0],target[1]);g.stroke();
+    }
+    const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+    const mat=new THREE.MeshBasicMaterial({map:texture,transparent:true,side:THREE.DoubleSide,depthWrite:false});
+    const badge=new THREE.Mesh(new THREE.PlaneGeometry(size,size),mat);
+    badge.position.set(x,y,z);parent.add(badge);return badge;
+  }
   function ellipseShadow(x,z,rx,rz,opacity=.11){
     const shadow=new THREE.Mesh(new THREE.CircleGeometry(1,24),new THREE.MeshBasicMaterial({color:'#244636',transparent:true,opacity,depthWrite:false}));
     shadow.rotation.x=-Math.PI/2;shadow.scale.set(rx,rz,1);shadow.position.set(x,.33,z);world.add(shadow);
@@ -123,18 +147,40 @@ function buildScene(){
   for(const z of [-10.75,6.35])box(23,.28,.17,0,.22,z,curb);
   // Cobertura, pilares e placas solares (bombas)
   const canopyX=-2.8,canopyZ=-1.45;
-  box(11.0,.5,5.7,canopyX,3.95,canopyZ,palette.trim);
-  box(11.25,.13,5.9,canopyX,4.25,canopyZ,palette.lime);
-  box(11.1,.19,.18,canopyX,3.78,1.43,palette.gold);
-  box(10.8,.14,.14,canopyX,3.55,1.44,palette.white);
+  // Cobertura Shell: teto branco, faixa vermelha e linha amarela contínua,
+  // com proporções baseadas em fachadas de postos reais.
+  box(11.05,.42,5.7,canopyX,3.93,canopyZ,palette.white);
+  box(11.25,.12,5.90,canopyX,4.23,canopyZ,palette.white);
+  box(11.13,.44,.16,canopyX,4.00,1.46,palette.trim);
+  box(11.15,.095,.19,canopyX,4.18,1.50,palette.lime);
+  box(11.15,.11,.16,canopyX,3.77,1.47,palette.gold);
+  box(11.14,.40,.16,canopyX,4.01,-4.36,palette.trim);
+  box(11.14,.10,.19,canopyX,4.19,-4.37,palette.lime);
+  for(const x of [-8.40,2.81]){
+    box(.15,.40,5.9,x,4.01,canopyZ,palette.trim);
+    box(.16,.085,5.9,x,4.21,canopyZ,palette.lime);
+  }
+  for(const x of [-7.35,1.75])for(const z of [-3.7,.85]){
+    box(.41,3.45,.41,x,1.94,z,palette.white);
+    box(.12,1.55,.043,x,1.65,z+.227,palette.red);
+    box(.40,.13,.40,x,3.66,z,palette.gold);
+  }
+  // Fachada física e adesivos só na estrutura; não interferem nas colisões.
+  shellMark(-7.55,3.98,1.58,.82);
+  planeLabel('SHELL',3.00,.51,-4.42,3.98,1.572,'#ffffff',null,112);
+  planeLabel('POSTO-ESCOLA  •  SIMULAÇÃO',2.85,.19,-1.38,3.80,1.572,'#ffe89b',null,47);
+  // Painéis foscos sob a cobertura para dar profundidade arquitetônica.
+  for(const x of [-6.40,-3.8,-1.2,.85]){
+    box(2.12,.04,4.75,x,3.62,-1.46,color('#e4e8e5'));
+    for(const z of [-2.65,-.30])box(1.55,.045,.17,x,3.586,z,palette.led);
+  }
   // Fileiras de luminárias LED sob a cobertura: materiais emissivos + poucas luzes reais.
   for(const x of [-6.1,-3.1,.05]){
     for(const z of [-2.6,.35])box(1.5,.065,.16,x,3.62,z,palette.led);
     const lamp=new THREE.PointLight('#fff1cf',0,8,2);
     lamp.position.set(x,3.2,-1.5);scene.add(lamp);lamps.push(lamp);
   }
-  planeLabel('ECOPOSTO',5.2,.67,-3.9,3.93,1.59,'#ffffff',null,105);
-  planeLabel('SHELL  ·  TREINAMENTO',3,.35,.0,3.97,1.61,'#e7f5de',null,54);
+  // As inscrições novas na testeira substituem os letreiros EcoPosto antigos.
   for(const x of [-7.35,1.75])for(const z of [-3.7,.85]){
     box(.34,3.65,.34,x,1.95,z,palette.white);
     box(.48,.15,.48,x,.3,z,palette.gray);
@@ -158,11 +204,14 @@ function buildScene(){
     box(1.15,.17,.83,x,.37,z,palette.gray);
     box(1.03,2.18,.72,x,1.52,z,palette.white);
     box(1.08,.24,.83,x,2.69,z,palette.trim);
+    box(1.09,.09,.84,x,2.86,z,palette.gold);
+    box(1.02,.10,.73,x,.53,z,palette.red);
     box(.82,.66,.055,x,2.18,z+.388,palette.dark);
     box(.71,.42,.059,x,2.20,z+.424,palette.screen);
     planeLabel('R$  0,00',.63,.14,x,2.26,z+.464,'#245b39',null,51);
     planeLabel('L    0,00',.63,.12,x,2.08,z+.464,'#245b39',null,50);
-    planeLabel(title,.89,.16,x,1.69,z+.375,'#ffffff','#21674d',68);
+    planeLabel(title,.89,.16,x,1.69,z+.375,'#ffffff',title==='PREMIUM'?'#af1632':'#d81e32',68);
+    planeLabel('SHELL',.78,.11,x,2.61,z+.43,'#ffe134',null,52);
     fuel.forEach(([name,hex],i)=>{
       const dx=(i-(fuel.length-1)/2)*.29;
       const material=color(hex);
@@ -212,9 +261,15 @@ function buildScene(){
   }
   box(4.93,.27,4.02,5.27,3.25,-2.49,palette.trim);
   box(4.97,.11,4.07,5.27,3.45,-2.49,palette.lime);
-  box(4.73,.54,.16,5.27,2.75,-.53,palette.green);
-  planeLabel('CONVENIÊNCIA',3.66,.39,5.27,2.77,-.426,'#ffffff',null,78);
-  box(4.62,.15,.40,5.27,3.00,-.53,palette.led);
+  box(4.73,.58,.16,5.27,2.73,-.53,palette.gold);
+  box(4.74,.13,.17,5.27,3.10,-.50,palette.red);
+  planeLabel('SHELL  SELECT',3.64,.37,5.27,2.78,-.422,'#a71931',null,78);
+  planeLabel('CONVENIÊNCIA',2.60,.17,5.26,2.57,-.421,'#78441c',null,47);
+  box(4.62,.12,.38,5.27,3.21,-.53,palette.led);
+  for(const x of [3.06,7.47]){box(.11,2.45,.16,x,1.61,-.57,palette.red);}
+  // Faixa decorativa no rodapé da vitrine, antes das portas deslizantes.
+  for(const x of [3.50,4.02,6.51,7.04])
+    box(.48,.15,.022,x,.59,-.502,palette.gold);
   // Revestimento de piso em quadrados, com prateleira central livre para circulação lateral.
   const grout=color('#aebbb6');
   for(let i=0;i<5;i++){
@@ -266,8 +321,22 @@ function buildScene(){
   planeLabel('PIX',.18,.07,6.99,1.43,-1.632,'#275c3f',null,48);
   box(.22,.09,.021,6.99,1.19,-1.65,palette.gray);
   // Letreiros de seções internas e quadro de ofertas fictícias.
-  planeLabel('BEBIDAS  •  LANCHES',2.28,.27,4.44,2.40,-4.277,'#4a7a55',null,64);
-  planeLabel('PAGAMENTO AQUI',1.48,.20,6.48,2.18,-3.94,'#387453',null,58);
+  planeLabel('BEBIDAS  •  LANCHES',2.28,.27,4.44,2.40,-4.277,'#bd2335',null,64);
+  planeLabel('PAGAMENTO AQUI',1.48,.20,6.48,2.18,-3.94,'#ae2032',null,58);
+  // Espaço de café na loja: máquina, xícaras, sinalização e banco.
+  box(.79,.71,.55,7.09,1.24,-3.66,palette.dark);
+  box(.54,.18,.047,7.09,1.40,-3.357,palette.screen);
+  planeLabel('CAFÉ',.48,.13,7.09,1.40,-3.326,'#ffffff',null,55);
+  for(const x of [6.88,7.10,7.30]){
+    cylinder(.065,.065,.11,x,1.66,-3.32,palette.white,8);
+    box(.13,.027,.13,x,1.74,-3.32,palette.gold);
+  }
+  for(const x of [3.42,4.05]){
+    box(.20,.75,.20,x,.69,-.80,palette.dark);
+    box(.42,.10,.38,x,1.10,-.80,palette.gold);
+  }
+  // Placas decorativas de ofertas, sem números de preço regulamentados ficticiamente.
+  planeLabel('CAFÉ • SNACKS • BEBIDAS',2.90,.20,5.15,2.31,-4.259,'#be2737',null,49);
   const shopEnd=world.children.length;
   const shopGroup=new THREE.Group();
   shopGroup.name='loja-conveniencia-interior';
@@ -279,14 +348,17 @@ function buildScene(){
   // rampa, ferramentas, barris e embalagens (sem modelagens externas pesadas).
   ellipseShadow(6.35,-.35,3.0,2.9,.12);
   box(5.0,.23,4.4,6.45,.32,-.45,color('#dce3dc'));
-  box(5.10,.32,4.63,6.40,3.25,-.45,palette.dark);
-  box(5.16,.10,4.68,6.40,3.48,-.45,palette.gold);
+  box(5.10,.27,4.63,6.40,3.25,-.45,palette.white);
+  box(5.16,.13,4.68,6.40,3.48,-.45,palette.red);
+  box(5.20,.07,4.72,6.40,3.57,-.45,palette.gold);
   for(const x of [4.15,8.65])for(const z of [-2.5,1.65]){
     box(.22,2.86,.22,x,1.76,z,palette.white);
     box(.35,.20,.35,x,.35,z,palette.gray);
   }
-  box(5.05,.54,.14,6.40,2.72,1.89,palette.green);
-  planeLabel('TROCA DE ÓLEO',4.35,.46,6.40,2.72,1.98,'#ffffff',null,72);
+  box(5.05,.54,.14,6.40,2.72,1.89,palette.red);
+  planeLabel('SHELL HELIX',3.85,.36,6.40,2.79,1.98,'#ffffff',null,77);
+  planeLabel('TROCA DE ÓLEO',3.70,.18,6.40,2.56,1.982,'#ffe344',null,50);
+  for(const x of [4.35,8.45])box(.12,2.5,.11,x,1.70,1.63,palette.gold);
   // Área aberta visível de frente, com elevador pantográfico estilizado.
   box(3.05,.22,1.65,6.33,.55,-.4,color('#4f6464'));
   box(2.2,.14,1.34,6.33,1.00,-.4,palette.gray);
@@ -348,12 +420,15 @@ function buildScene(){
   for(const x of [2.42,3.06]){cylinder(.10,.11,.72,x,.63,2.11,palette.gold,10);}
   // Placa totem com informações e placas pequenas
   box(.27,3.3,.28,-9.15,1.78,-3.7,palette.dark);
-  box(1.52,2.20,.35,-9.15,3.50,-3.7,palette.green);
-  planeLabel('ECO',1.2,.45,-9.15,4.09,-3.49,'#d5fb99',null,128);
-  planeLabel('POSTO',1.2,.36,-9.15,3.64,-3.49,'#ffffff',null,103);
-  planeLabel('DEMO',1.2,.29,-9.15,3.08,-3.49,'#ffd56c',null,94);
-  planeLabel('COMUM  6,25',1.24,.24,-9.15,2.82,-3.47,'#ffffff',null,49);
-  planeLabel('S10     5,99',1.24,.24,-9.15,2.60,-3.47,'#ffffff',null,49);
+  box(1.58,2.42,.35,-9.15,3.53,-3.7,palette.white);
+  box(1.59,.45,.39,-9.15,4.52,-3.7,palette.red);
+  box(1.59,.12,.41,-9.15,3.30,-3.7,palette.gold);
+  shellMark(-9.15,4.50,-3.46,.55);
+  planeLabel('SHELL',1.20,.27,-9.15,3.87,-3.49,'#c72035',null,97);
+  planeLabel('POSTO-ESCOLA',1.30,.15,-9.15,3.48,-3.49,'#5e2930',null,43);
+  planeLabel('COMUM  R$ 6,25',1.32,.20,-9.15,2.94,-3.47,'#22313a',null,47);
+  planeLabel('S10   R$ 5,99',1.32,.20,-9.15,2.68,-3.47,'#22313a',null,47);
+  planeLabel('VALORES FICTÍCIOS',1.36,.13,-9.15,2.46,-3.47,'#aa2438',null,37);
   // Valores e letreiros exclusivamente demonstrativos.
   // Não há carros decorativos na entrada: vagas fixas ficam atrás da loja,
   // no bairro, fora das rotas de tráfego e do atendimento.
@@ -361,6 +436,19 @@ function buildScene(){
   for(const x of [3.45,9.25])for(const z of [-2.75,1.45]){
     cylinder(.065,.075,.74,x,.66,z,palette.gold,8);
     cylinder(.07,.07,.10,x,.93,z,palette.white,8);
+  }
+  // Detalhes de pista sem obstáculos nas faixas: extensores de LED,
+  // jardineiras no canto dos prédios e sinalização da área de serviço.
+  for(const z of [-3.82,-2.45,-.85,.79]){
+    box(.07,.22,.12,-8.17,3.72,z,palette.gold);
+    box(.07,.22,.12,2.58,3.72,z,palette.gold);
+  }
+  for(const [x,z] of [[-8.8,-6.1],[-7.35,-6.4],[9.75,-4.0],[10.10,2.1]]){
+    box(.72,.29,.65,x,.31,z,color('#e8e3d2'));
+    for(const [dx,dz] of [[-.22,0],[.18,-.16],[.04,.20]]){
+      const shrub=new THREE.Mesh(new THREE.IcosahedronGeometry(.24,0),color('#477e4b'));
+      shrub.position.set(x+dx,.72,z+dz);world.add(shrub);
+    }
   }
   // Arborização estilizada de baixo número de polígonos
   function tree(x,z,h=.95){
