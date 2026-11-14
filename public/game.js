@@ -263,7 +263,9 @@ function initialise(){
     const type=order.kind==='diesel'||order.kind==='diesel-antigo'?
       (Math.random()>.48?'pickup':'van'):['car','hatch','suv'][Math.floor(Math.random()*3)];
     const vehicle=createVehicle(paints[Math.floor(Math.random()*paints.length)],type);
-    const entryX=-15.8;
+    // O carro surge depois da boca do acesso, sem ocupar a via lateral.
+    // Isso evita deadlock entre a fila de clientes e o fluxo da avenida.
+    const entryX=-12.55;
     const finalX=fuel.x+.20;
     vehicle.position.set(entryX,.18,5.15);
     vehicle.rotation.y=0;
@@ -885,6 +887,11 @@ function initialise(){
     currentCustomer:()=>currentCar?.order||null,spawnCustomer:createQueueCar,
     getPlayerPosition:()=>({x:player.position.x,y:player.position.y,z:player.position.z}),
     getCustomerState:()=>currentCar?.state||null,
+    getCustomerProgress:()=>currentCar?{
+      state:currentCar.state,distance:currentCar.distance,
+      length:currentCar.route?.length||0,speed:currentCar.velocity,
+      x:currentCar.group.position.x,z:currentCar.group.position.z
+    }:null,
     getDebugState:()=>({active:states.active,keys:[...states.keys],
       position:{x:player.position.x,z:player.position.z},yaw:cameraRig.yaw,
       tickLastFrame:lastFrame,openDialogs:[...document.querySelectorAll('dialog[open]')].map(x=>x.id),

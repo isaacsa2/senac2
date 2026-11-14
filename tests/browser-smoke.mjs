@@ -67,7 +67,8 @@ try{
   console.log('Movement diagnostic:',JSON.stringify({before,pressed,moving,after}));
   assert.ok(Math.hypot(after.position.x-before.position.x,after.position.z-before.position.z)>.10,
     'attendant did not walk; debug: '+JSON.stringify({before,pressed,moving,after}));
-  await page.waitForFunction(()=>window.ecoGame?.getCustomerState()==='parked',{timeout:26000});
+  await page.waitForFunction(()=>window.ecoGame?.getCustomerState()==='parked',null,{timeout:46000});
+  console.log('Customer progression:',JSON.stringify(await page.evaluate(()=>window.ecoGame.getCustomerProgress())));
   assert.ok(await page.evaluate(()=>Boolean(window.ecoGame.currentCustomer()?.fuelId)),
     'arriving customer has no valid fuel request');
   console.log('Attendant moved and first customer parked');

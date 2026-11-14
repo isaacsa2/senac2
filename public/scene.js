@@ -652,7 +652,7 @@ try{
     qualityMode=mode;
     const detail=mode==='alto'||(mode==='auto'&&!lowPower());
     renderer.shadowMap.enabled=detail;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mode==='economico'?1:detail?1.7:1.10));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mode==='economico'?.78:detail?1.7:1.10));
     sunLight.shadow.mapSize.set(detail?1024:512,detail?1024:512);
     sunLight.shadow.map?.dispose();
     if(sunLight.shadow.map)sunLight.shadow.map=null;
@@ -691,7 +691,7 @@ try{
   function animateAmbient(time){
     ambientId=requestAnimationFrame(animateAmbient);
     if(document.hidden||!ambientVisible)return;
-    if(ambientLast&&time-ambientLast<(lowPower()?58:35))return;
+    if(ambientLast&&time-ambientLast<(qualityMode==='economico'?55:lowPower()?58:35))return;
     const delta=ambientLast?Math.min(.24,Math.max(0,(time-ambientLast)/1000)):.035;
     ambientLast=time;
     // Trânsito com tempo estável em GPU lenta, sem extrapolar física dos semáforos.
