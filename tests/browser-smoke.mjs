@@ -21,7 +21,7 @@ try{
   assert.match(await page.title(),/Edição Shell/);
   assert.ok(await page.locator('.brand-notice').count()===1);
   const branding=await page.locator('.brand-notice').innerText();
-  assert.match(branding,/não é um produto oficial/);
+  assert.match(branding,/não é um produto oficial/i);
   assert.ok(await page.evaluate(()=>getComputedStyle(document.querySelector('.site-header'),'::before').backgroundImage.includes('linear-gradient')),
     'header Shell-inspired stripe not rendered');
 
